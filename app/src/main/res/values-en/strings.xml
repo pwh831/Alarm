@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FitWake</string>
+
+    <!-- Home -->
+    <string name="add_alarm">+ Add alarm</string>
+    <string name="empty_alarms">No alarms yet.\nTap the button at the bottom right to create your first one.</string>
+    <string name="no_upcoming_alarm">No alarms are on</string>
+    <string name="remaining_days">Rings in %1$d d %2$d h</string>
+    <string name="remaining_hours">Rings in %1$d h %2$d min</string>
+    <string name="remaining_minutes">Rings in %1$d min</string>
+    <string name="repeat_once">Once</string>
+    <string name="repeat_every_day">Every day</string>
+    <string name="repeat_weekdays">Weekdays</string>
+    <string name="repeat_weekends">Weekends</string>
+    <string name="mission_summary">%1$s × %2$d · %3$s</string>
+
+    <!-- Permissions -->
+    <string name="perm_panel_title">A few settings are needed for alarms to ring reliably</string>
+    <string name="perm_notifications">Allow notifications</string>
+    <string name="perm_notifications_desc">Without notifications, the alarm can\'t appear on the lock screen.</string>
+    <string name="perm_exact_alarm">Allow exact alarms</string>
+    <string name="perm_exact_alarm_desc">Without this, alarms may ring a few minutes late.</string>
+    <string name="perm_full_screen">Allow full-screen notifications</string>
+    <string name="perm_full_screen_desc">Needed to show the alarm screen over the lock screen.</string>
+    <string name="perm_camera">Allow camera</string>
+    <string name="perm_camera_desc">Needed to recognize your exercise. Video never leaves your phone and is never saved.</string>
+    <string name="perm_battery">Disable battery optimization</string>
+    <string name="perm_battery_desc">With battery optimization on, some phones may stop the alarm. Set FitWake to \'Unrestricted\' in the list.</string>
+
+    <!-- Edit alarm -->
+    <string name="new_alarm">New alarm</string>
+    <string name="edit_alarm">Edit alarm</string>
+    <string name="repeat">Repeat</string>
+    <string name="label">Label (optional)</string>
+    <string name="mission">Mission</string>
+    <string name="exercise">Exercise</string>
+    <string name="exercise_squat">Squats</string>
+    <string name="exercise_pushup">Push-ups</string>
+    <string name="exercise_arm_raise">Arm raises</string>
+    <string name="exercise_random">Random</string>
+    <string name="exercise_random_note">Squats or push-ups, picked at random each time the alarm rings.</string>
+    <string name="exercise_arm_raise_note">A gentle mission for injuries or small rooms. Raise both arms overhead and lower them for one rep.</string>
+    <string name="difficulty">Difficulty</string>
+    <string name="difficulty_easy">Easy</string>
+    <string name="difficulty_normal">Normal</string>
+    <string name="difficulty_hard">Hard</string>
+    <string name="target_reps">Goal: %1$d reps</string>
+    <string name="preview_mission">Try it now</string>
+    <string name="preview_success">Done! Took %1$d s</string>
+    <string name="sound">Sound</string>
+    <string name="sound_default">Default alarm sound</string>
+    <string name="vibrate">Vibrate</string>
+    <string name="volume_ramp">Gradually increase volume</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+
+    <!-- Ringing -->
+    <string name="channel_alarm">Alarms</string>
+    <string name="channel_alarm_description">Shows ringing alarms</string>
+    <string name="notification_ringing_text">Complete the mission to stop the alarm</string>
+    <string name="ringing_prompt">Time to get up! Complete the mission to stop the alarm</string>
+    <string name="start_mission">Start mission</string>
+    <string name="emergency_dismiss">Emergency stop</string>
+    <string name="emergency_instructions">Only for real emergencies. Type the sentence below exactly to stop the alarm.</string>
+    <string name="emergency_phrase">I am fully awake and I choose to turn off the alarm instead of exercising</string>
+    <string name="emergency_confirm">Stop alarm</string>
+    <string name="cancel">Cancel</string>
+    <string name="done_title">Mission complete!</string>
+    <string name="done_body_alarm">Alarm stopped in %1$d s. Have a great day!</string>
+    <string name="close">Close</string>
+
+    <!-- Mission -->
+    <string name="camera_permission_needed">Camera access is needed to recognize your exercise.\nVideo never leaves your phone and is never saved.</string>
+    <string name="grant_permission">Allow</string>
+    <string name="switch_camera">Switch camera</string>
+    <string name="quit">Stop</string>
+    <string name="hint_get_ready_squat">Stand 2–3 m back so your whole body is visible</string>
+    <string name="hint_get_ready_pushup">Place the phone to your side and hold a straight-arm plank</string>
+    <string name="hint_get_ready_arm_raise">Stand with your upper body visible and arms down</string>
+    <string name="hint_countdown">Great, hold still! Starting soon</string>
+    <string name="hint_phone_moving">The phone is moving. Stand it on the floor or a shelf</string>
+    <string name="torch_on">Flash on</string>
+    <string name="torch_off">Flash off</string>
+    <string name="hint_go">Nice! Keep going</string>
+    <string name="hint_body_not_visible">Can\'t see you well. Step back a little or turn on a light</string>
+    <string name="hint_too_fast">Too fast. Slow down and go all the way</string>
+    <string name="hint_lower_hips">Lower your hips more</string>
+    <string name="hint_get_horizontal">Keep your body parallel to the floor</string>
+    <string name="hint_keep_body_straight">Keep a straight line from shoulders to feet</string>
+
+    <!-- Onboarding -->
+    <string name="next">Next</string>
+    <string name="allow">Allow</string>
+    <string name="done_check">Done</string>
+    <string name="onboarding_welcome_title">An alarm you stop by exercising</string>
+    <string name="onboarding_welcome_body">FitWake alarms don\'t stop with a button.\nYou have to do a set number of squats or push-ups. Moving your body really wakes you up.</string>
+    <string name="onboarding_how_title">How it works</string>
+    <string name="onboarding_how_body">1. When the alarm rings, tap \'Start mission\'.\n2. Stand the phone on the floor or a shelf and step 2–3 m back.\n3. Once the camera sees you, counting starts after 3 seconds.\n4. Reach your goal and the alarm stops.\n\nThe alarm gets quieter during the mission, but gets loud again if you stop moving for a minute.</string>
+    <string name="onboarding_privacy_title">Camera video never leaves your phone</string>
+    <string name="onboarding_privacy_body">Exercise recognition runs entirely on your phone. Video is never uploaded or saved, and everything works offline.</string>
+    <string name="onboarding_permissions_title">Make sure your alarms always ring</string>
+    <string name="onboarding_permissions_body">If any of these is missing, alarms may ring late or not appear on the lock screen.</string>
+    <string name="onboarding_permissions_later_note">You can also do this later from the home screen.</string>
+    <string name="onboarding_later">Later</string>
+    <string name="onboarding_battery_title">Check your battery settings</string>
+    <string name="onboarding_battery_body">Some phones force-stop apps to save battery, which stops alarms. Please set this up once.</string>
+    <string name="open_app_settings">Open app settings</string>
+    <string name="battery_more_info">Instructions for other phones (dontkillmyapp.com)</string>
+    <string name="battery_guide_samsung">Samsung: Settings → Battery → Background usage limits → add FitWake to \'Never sleeping apps\'.\nWe also recommend turning off \'Put unused apps to sleep\'.</string>
+    <string name="battery_guide_xiaomi">Xiaomi: Settings → Apps → Manage apps → FitWake → turn on \'Autostart\' and set \'Battery saver\' to \'No restrictions\'.\nLocking FitWake in the recent apps screen also helps.</string>
+    <string name="battery_guide_huawei">Huawei/Honor: Settings → Battery → App launch → turn off \'Manage automatically\' for FitWake and enable auto-launch, secondary launch and run in background.</string>
+    <string name="battery_guide_oppo">OPPO/realme/OnePlus: Settings → Battery → FitWake → turn on \'Allow background activity\' and allow auto-launch.</string>
+    <string name="battery_guide_vivo">vivo: Settings → Battery → Background power consumption management → allow FitWake. Also turn on autostart.</string>
+    <string name="battery_guide_other">Settings → Apps → FitWake → Battery, then choose \'Unrestricted\' (or \'Don\'t optimize\').</string>
+    <string name="onboarding_trial_title">Want to try it?</string>
+    <string name="onboarding_trial_body">Do %1$d squats to check that the camera recognizes you. Stand the phone up and step back so your whole body is visible.</string>
+    <string name="onboarding_trial_start">Start trial</string>
+    <string name="onboarding_trial_done">Done in %1$d s! Now create your first alarm.</string>
+    <string name="onboarding_skip_trial">Skip</string>
+    <string name="onboarding_finish">Get started</string>
+
+    <!-- Snooze and wake check -->
+    <string name="snooze_setting">Allow snooze</string>
+    <string name="snooze_setting_desc">Rings again after %1$d min. Up to %2$d times, and snoozing takes a %3$d-rep mission too.</string>
+    <string name="wake_check_setting">Wake-up check</string>
+    <string name="wake_check_setting_desc">5 minutes after you stop the alarm, you\'ll get a check. If you don\'t tap it within a minute, the alarm rings again.</string>
+    <string name="snooze_button">Snooze %1$d min (%2$d-rep mission · %3$d left)</string>
+    <string name="snoozed_title">Snoozed</string>
+    <string name="snoozed_body">Ringing again in %1$d minutes.</string>
+    <string name="channel_wake_check">Wake-up check</string>
+    <string name="channel_wake_check_description">Checks that you really got up after stopping the alarm</string>
+    <string name="wake_check_title">Are you up?</string>
+    <string name="wake_check_text">If you don\'t tap within a minute, the alarm rings again</string>
+    <string name="wake_check_confirm">I\'m up</string>
+
+    <!-- Stats -->
+    <string name="back">‹ Back</string>
+    <string name="stats">History</string>
+    <string name="streak_label">Wake-up streak</string>
+    <string name="streak_days">%1$d days</string>
+    <string name="this_week">This week</string>
+    <string name="this_month">This month</string>
+    <string name="reps_line">%1$s × %2$d</string>
+    <string name="avg_dismiss">On average, alarm stopped in %1$d min %2$d s</string>
+    <string name="avg_dismiss_none">No alarms stopped by mission yet</string>
+    <string name="month_emergency">Emergency stops this month: %1$d</string>
+    <string name="month_pattern">MMMM yyyy</string>
+    <string name="recent_records">Recent</string>
+    <string name="no_records">No history yet. It builds up as you complete alarm missions.</string>
+    <string name="record_mission">%1$s × %2$d · %3$d min %4$d s</string>
+    <string name="record_emergency">Emergency stop</string>
+    <string name="record_snoozed">snoozed %1$d×</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="default_mission">Default mission for new alarms</string>
+    <string name="default_mission_desc">New alarms start with these settings.</string>
+    <string name="saved">Saved</string>
+    <string name="replay_onboarding">Show intro again</string>
+    <string name="about">FitWake %1$s · Camera video never leaves your device and is never saved.</string>
+</resources>
