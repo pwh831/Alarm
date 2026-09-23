@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111316">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>FitWake</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 홈 -->
+  <section id="home" class="view">
+    <header>
+      <h1>FitWake</h1>
+      <nav><button data-go="stats" class="link">기록</button><button data-go="guide" class="link">설정 방법</button></nav>
+    </header>
+    <p class="muted">아이폰 시계 알람을 끄면 이 페이지가 열리고, 운동을 끝내야 백업 알람이 꺼져요.</p>
+
+    <div class="card">
+      <h2>미션</h2>
+      <label>운동
+        <select id="exercise">
+          <option value="SQUAT">스쿼트</option>
+          <option value="PUSHUP">푸시업</option>
+          <option value="RANDOM">랜덤 (스쿼트·푸시업)</option>
+          <option value="ARM_RAISE">팔 올리기 (가벼운 미션)</option>
+        </select>
+      </label>
+      <label>난이도
+        <select id="difficulty">
+          <option value="EASY">쉬움</option>
+          <option value="NORMAL" selected>보통</option>
+          <option value="HARD">어려움</option>
+        </select>
+      </label>
+      <label>목표 횟수 <input id="reps" type="number" min="5" max="50" step="1" value="15" inputmode="numeric"></label>
+      <p id="exercise-note" class="muted small"></p>
+    </div>
+
+    <button id="practice" class="primary">연습해 보기</button>
+    <p class="muted small">연습은 기록에 남지 않고 단축어도 실행하지 않아요.</p>
+  </section>
+
+  <!-- 미션 -->
+  <section id="mission" class="view hidden">
+    <div class="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="countdown" class="countdown hidden"></div>
+      <div class="hud">
+        <div id="count" class="count">0 / 15</div>
+        <div id="hint" class="hint">준비 중…</div>
+      </div>
+      <div class="controls">
+        <button id="switch-camera">카메라 전환</button>
+        <button id="emergency" class="danger hidden">긴급 해제</button>
+        <button id="quit" class="hidden">그만하기</button>
+      </div>
+      <div id="tap-to-start" class="tap-to-start">
+        <div>
+          <h2 id="tap-title">일어날 시간이에요!</h2>
+          <p id="tap-mission"></p>
+          <button id="start" class="primary big">탭해서 미션 시작</button>
+          <p class="muted small">카메라·동작 권한을 물어보면 허용해 주세요.</p>
+        </div>
+      </div>
+      <div id="loading" class="tap-to-start hidden"><div><p>운동 인식 준비 중…</p></div></div>
+    </div>
+  </section>
+
+  <!-- 완료 -->
+  <section id="done" class="view hidden center">
+    <h1>미션 완료!</h1>
+    <p id="done-text"></p>
+    <button id="run-shortcut" class="primary big">백업 알람 끄기</button>
+    <p id="done-note" class="muted small">단축어 앱이 열리면서 오늘의 백업 알람이 꺼져요.</p>
+    <button data-go="home" class="link">처음으로</button>
+  </section>
+
+  <!-- 기록 -->
+  <section id="stats" class="view hidden">
+    <header><button data-go="home" class="link">‹ 뒤로</button><h1>기록</h1></header>
+    <div class="card center">
+      <div class="muted">연속 기상</div>
+      <div id="streak" class="streak">0일</div>
+    </div>
+    <div class="card" id="reps-summary"></div>
+    <div class="card">
+      <div class="month-nav"><button id="prev-month" class="link">‹</button><span id="month-title"></span><button id="next-month" class="link">›</button></div>
+      <div id="calendar" class="calendar"></div>
+    </div>
+    <h2>최근 기록</h2>
+    <ul id="recent" class="recent"></ul>
+  </section>
+
+  <!-- 설정 방법 -->
+  <section id="guide" class="view hidden">
+    <header><button data-go="home" class="link">‹ 뒤로</button><h1>설정 방법</h1></header>
+    <div class="card">
+      <h2>1. 시계 앱 알람 만들기</h2>
+      <ol>
+        <li><b>기상 알람</b>: 예) 7:00, 원하는 요일 반복.</li>
+        <li><b>백업 알람</b> 5개: 7:03, 7:06, 7:09, 7:12, 7:15 (같은 요일 반복). 레이블을 <code>FitWake 백업</code>으로 해 두면 찾기 쉬워요.</li>
+      </ol>
+      <p class="muted small">미션을 끝내기 전까지 백업 알람이 3분마다 울려요.</p>
+    </div>
+    <div class="card">
+      <h2>2. 단축어 "FitWake 완료" 만들기</h2>
+      <ol>
+        <li>단축어 앱 → 오른쪽 위 <b>+</b> → 이름을 <code id="shortcut-name-label">FitWake 완료</code>로.</li>
+        <li><b>동작 추가</b> → "알람 켜기/끄기" 검색 → 백업 알람 1개 선택, <b>끄기</b>로 설정.</li>
+        <li>백업 알람 5개 모두 같은 동작을 추가.</li>
+      </ol>
+      <p class="muted small">미션을 마치면 이 페이지가 이 단축어를 실행해요.</p>
+    </div>
+    <div class="card">
+      <h2>3. 자동화 두 개 만들기</h2>
+      <p><b>① 알람을 끄면 미션 열기</b></p>
+      <ol>
+        <li>단축어 앱 → <b>자동화</b> → <b>+</b> → <b>알람</b> → "<b>중단될 때</b>", 알람은 <b>모든 알람</b>(또는 기상·백업 알람) 선택.</li>
+        <li><b>즉시 실행</b> 선택.</li>
+        <li>동작: "URL 열기" → <code id="mission-url"></code></li>
+      </ol>
+      <p><b>② 매일 백업 알람 다시 켜기</b></p>
+      <ol>
+        <li>자동화 → <b>+</b> → <b>특정 시간</b> → 예) 오후 9:00, 매일 → <b>즉시 실행</b>.</li>
+        <li>동작: "알람 켜기/끄기"로 백업 알람 5개를 <b>켜기</b>.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>4. 확인</h2>
+      <ol>
+        <li>Safari에서 이 페이지 → 주소창 <b>aA</b> → 웹사이트 설정 → 카메라·동작 <b>허용</b>으로 바꾸면 매번 묻지 않아요.</li>
+        <li>1~2분 뒤로 알람을 맞추고 꺼 보세요. 미션 페이지가 열리면 성공이에요.</li>
+      </ol>
+      <label>단축어 이름 <input id="shortcut-name" type="text"></label>
+    </div>
+  </section>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

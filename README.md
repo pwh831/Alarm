@@ -14,12 +14,25 @@
 | M4 | 베타 테스트 → 인식 기준값 튜닝 | 실기기 필요 |
 | M5 | Play 스토어 출시 | 예정 |
 
+## 아이폰에서 쓰기 (웹 버전)
+
+유료 개발자 계정 없이 아이폰에서 쓰려고 만든 버전이다. 설치·서명이 없어 만료되지 않는다.
+
+- 알람은 아이폰 **시계 앱** 알람을 쓴다. 가장 확실하게 울리고 무음 모드에서도 울린다.
+- 알람을 끄면 **단축어 자동화**가 미션 페이지(`web/`, GitHub Pages)를 연다.
+- 3분 간격 **백업 알람**이 미션을 끝낼 때까지 울리고, 미션을 마치면 페이지가 단축어 "FitWake 완료"를 실행해 그날 백업 알람을 끈다.
+- 설정 순서는 페이지의 "설정 방법" 화면에 있다.
+
+`web/core.js`는 Android·iOS와 같은 판정 규칙을 JavaScript로 옮긴 것이고 `node --test web/core.test.mjs`로 테스트한다. 인식 엔진은 브라우저용 MediaPipe Pose Landmarker다.
+
 ## 구조
 
 ```
 core/pose/    반복 카운터, 미션 진행(카운트다운·폰 움직임 감지) (순수 Kotlin, JVM 테스트)
 core/alarm/   알람 모델, 다음 울림 시각, 볼륨 정책, 긴급 해제, 스누즈 규칙, 기록 통계 (순수 Kotlin, JVM 테스트)
 app/          Android 앱 (Jetpack Compose)
+ios/          iOS 네이티브 앱 (SwiftUI + AlarmKit + Vision, 사이드로드용)
+web/          아이폰용 웹 미션 페이지 (시계 알람 + 단축어와 함께 사용)
   alarm/      AlarmScheduler, AlarmReceiver, BootReceiver, AlarmService(포그라운드), AlarmPlayer, WakeCheck
   data/       Room DB: 알람(AlarmRepository, 저장과 예약을 함께 처리), 기상 기록(WakeLogRepository)
   home/       알람 목록, 다음 알람까지 남은 시간, 권한 안내
