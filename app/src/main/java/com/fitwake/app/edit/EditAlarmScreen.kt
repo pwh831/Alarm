@@ -48,6 +48,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.fitwake.alarm.Alarm
+import com.fitwake.alarm.Snooze
+import com.fitwake.app.AppPrefs
 import com.fitwake.app.R
 import com.fitwake.app.alarmRepository
 import com.fitwake.app.mission.MissionScreen
@@ -62,7 +64,7 @@ fun EditAlarmScreen(alarmId: Long?, onDone: () -> Unit) {
     val context = LocalContext.current
     var initial by remember { mutableStateOf<Alarm?>(null) }
     LaunchedEffect(alarmId) {
-        initial = alarmId?.let { context.alarmRepository.get(it) } ?: Alarm(hour = 7, minute = 0)
+        initial = alarmId?.let { context.alarmRepository.get(it) } ?: AppPrefs.newAlarm(context)
     }
     initial?.let { EditAlarmForm(it, onDone) }
 }
@@ -82,6 +84,8 @@ private fun EditAlarmForm(initial: Alarm, onDone: () -> Unit) {
     var soundUri by remember { mutableStateOf(initial.soundUri) }
     var vibrate by remember { mutableStateOf(initial.vibrate) }
     var volumeRamp by remember { mutableStateOf(initial.volumeRamp) }
+    var snoozeEnabled by remember { mutableStateOf(initial.snoozeEnabled) }
+    var wakeCheck by remember { mutableStateOf(initial.wakeCheck) }
     var previewing by remember { mutableStateOf(false) }
 
     fun current() = initial.copy(
@@ -95,6 +99,8 @@ private fun EditAlarmForm(initial: Alarm, onDone: () -> Unit) {
         soundUri = soundUri,
         vibrate = vibrate,
         volumeRamp = volumeRamp,
+        snoozeEnabled = snoozeEnabled,
+        wakeCheck = wakeCheck,
         enabled = true,
     )
 
@@ -187,6 +193,16 @@ private fun EditAlarmForm(initial: Alarm, onDone: () -> Unit) {
         }
         SwitchRow(stringResource(R.string.vibrate), vibrate) { vibrate = it }
         SwitchRow(stringResource(R.string.volume_ramp), volumeRamp) { volumeRamp = it }
+        SwitchRow(
+            stringResource(R.string.snooze_setting),
+            snoozeEnabled,
+            description = stringResource(R.string.snooze_setting_desc, Snooze.MINUTES, Snooze.MAX_COUNT, Snooze.MINI_MISSION_REPS),
+        ) { snoozeEnabled = it }
+        SwitchRow(
+            stringResource(R.string.wake_check_setting),
+            wakeCheck,
+            description = stringResource(R.string.wake_check_setting_desc),
+        ) { wakeCheck = it }
 
         Button(
             onClick = {
@@ -213,9 +229,12 @@ private fun EditAlarmForm(initial: Alarm, onDone: () -> Unit) {
 }
 
 @Composable
-private fun SwitchRow(text: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+private fun SwitchRow(text: String, checked: Boolean, description: String? = null, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(text, Modifier.weight(1f))
+        Column(Modifier.weight(1f)) {
+            Text(text)
+            description?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        }
         Switch(checked = checked, onCheckedChange = onChange)
     }
 }

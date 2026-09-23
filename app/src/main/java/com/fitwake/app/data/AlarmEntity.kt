@@ -24,6 +24,8 @@ data class AlarmEntity(
     val soundUri: String?,
     val vibrate: Boolean,
     val volumeRamp: Boolean,
+    val snoozeEnabled: Boolean,
+    val wakeCheck: Boolean,
 )
 
 fun AlarmEntity.toModel() = Alarm(
@@ -39,6 +41,8 @@ fun AlarmEntity.toModel() = Alarm(
     soundUri = soundUri,
     vibrate = vibrate,
     volumeRamp = volumeRamp,
+    snoozeEnabled = snoozeEnabled,
+    wakeCheck = wakeCheck,
 )
 
 fun Alarm.toEntity() = AlarmEntity(
@@ -54,4 +58,6 @@ fun Alarm.toEntity() = AlarmEntity(
     soundUri = soundUri,
     vibrate = vibrate,
     volumeRamp = volumeRamp,
+    snoozeEnabled = snoozeEnabled,
+    wakeCheck = wakeCheck,
 )

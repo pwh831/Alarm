@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fitwake.alarm.Alarm
 import com.fitwake.alarm.EmergencyDismiss
+import com.fitwake.alarm.Snooze
 import com.fitwake.app.R
 import com.fitwake.app.alarm.AlarmService
 import com.fitwake.app.alarm.RingState
@@ -43,7 +45,7 @@ import com.fitwake.pose.Exercise
 import kotlinx.coroutines.delay
 import java.time.LocalTime
 
-private enum class Step { RINGING, MISSION, DONE }
+private enum class Step { RINGING, MISSION, SNOOZE_MISSION, DONE, SNOOZED }
 
 @Composable
 fun RingingScreen(onFinished: () -> Unit) {
@@ -53,29 +55,42 @@ fun RingingScreen(onFinished: () -> Unit) {
     var elapsedSec by remember { mutableStateOf(0) }
 
     // 뒤로 가기로는 빠져나갈 수 없다.
-    BackHandler { if (step == Step.MISSION) step = Step.RINGING }
+    BackHandler { if (step == Step.MISSION || step == Step.SNOOZE_MISSION) step = Step.RINGING }
 
     // 알람이 이미 꺼졌으면(다른 경로로 해제됨) 화면을 닫는다.
     LaunchedEffect(state, step) {
-        if (state == RingState.Idle && step != Step.DONE) onFinished()
+        if (state == RingState.Idle && step != Step.DONE && step != Step.SNOOZED) onFinished()
     }
 
     val ringing = state as? RingState.Ringing
     val alarm = ringing?.alarm
     when {
-        step == Step.DONE -> DoneContent(elapsedSec, onFinished)
+        step == Step.DONE -> DoneContent(stringResource(R.string.done_body_alarm, elapsedSec), onFinished)
+        step == Step.SNOOZED -> DoneContent(
+            stringResource(R.string.snoozed_body, Snooze.MINUTES),
+            onFinished,
+            title = stringResource(R.string.snoozed_title),
+        )
         ringing == null || alarm == null -> Unit // 서비스가 알람 정보를 불러오는 중
-        step == Step.MISSION -> {
+        step == Step.MISSION || step == Step.SNOOZE_MISSION -> {
+            val snoozing = step == Step.SNOOZE_MISSION
             DisposableEffect(Unit) {
                 AlarmService.setMissionActive(context, true)
                 onDispose { AlarmService.setMissionActive(context, false) }
             }
+            val config = alarm.missionConfig(ringing.exercise)
             MissionScreen(
-                config = alarm.missionConfig(ringing.exercise),
+                // 스누즈도 짧은 미션을 해야 한다 (PRD AL-08).
+                config = if (snoozing) config.copy(targetReps = Snooze.MINI_MISSION_REPS) else config,
                 onComplete = { sec ->
                     elapsedSec = sec
-                    step = Step.DONE
-                    AlarmService.dismiss(context)
+                    if (snoozing) {
+                        step = Step.SNOOZED
+                        AlarmService.snooze(context)
+                    } else {
+                        step = Step.DONE
+                        AlarmService.dismissByMission(context, config.targetReps)
+                    }
                 },
                 onQuit = { step = Step.RINGING },
                 onRep = { AlarmService.reportProgress(context) },
@@ -84,9 +99,12 @@ fun RingingScreen(onFinished: () -> Unit) {
         else -> RingingContent(
             alarm = alarm,
             exercise = ringing.exercise,
+            canSnooze = Snooze.canSnooze(alarm, ringing.snoozeCount),
+            snoozesLeft = Snooze.MAX_COUNT - ringing.snoozeCount,
             onStartMission = { step = Step.MISSION },
+            onSnooze = { step = Step.SNOOZE_MISSION },
             onEmergencyDismiss = {
-                AlarmService.dismiss(context)
+                AlarmService.dismissEmergency(context)
                 onFinished()
             },
         )
@@ -97,7 +115,10 @@ fun RingingScreen(onFinished: () -> Unit) {
 private fun RingingContent(
     alarm: Alarm,
     exercise: Exercise,
+    canSnooze: Boolean,
+    snoozesLeft: Int,
     onStartMission: () -> Unit,
+    onSnooze: () -> Unit,
     onEmergencyDismiss: () -> Unit,
 ) {
     var now by remember { mutableStateOf(LocalTime.now()) }
@@ -139,6 +160,11 @@ private fun RingingContent(
                 .fillMaxWidth()
                 .height(64.dp),
         ) { Text(stringResource(R.string.start_mission), style = MaterialTheme.typography.titleLarge) }
+        if (canSnooze) {
+            OutlinedButton(onClick = onSnooze, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Text(stringResource(R.string.snooze_button, Snooze.MINUTES, Snooze.MINI_MISSION_REPS, snoozesLeft))
+            }
+        }
         TextButton(onClick = { showEmergency = true }) {
             Text(stringResource(R.string.emergency_dismiss), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -175,7 +201,7 @@ private fun EmergencyDialog(onDismissRequest: () -> Unit, onConfirmed: () -> Uni
 }
 
 @Composable
-private fun DoneContent(elapsedSec: Int, onClose: () -> Unit) {
+private fun DoneContent(body: String, onClose: () -> Unit, title: String = stringResource(R.string.done_title)) {
     Column(
         Modifier
             .fillMaxSize()
@@ -184,8 +210,8 @@ private fun DoneContent(elapsedSec: Int, onClose: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(stringResource(R.string.done_title), style = MaterialTheme.typography.displaySmall)
-        Text(stringResource(R.string.done_body_alarm, elapsedSec), textAlign = TextAlign.Center)
+        Text(title, style = MaterialTheme.typography.displaySmall)
+        Text(body, textAlign = TextAlign.Center)
         Button(onClick = onClose) { Text(stringResource(R.string.close)) }
     }
 }

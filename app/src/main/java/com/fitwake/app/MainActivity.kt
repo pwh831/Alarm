@@ -19,6 +19,8 @@ import com.fitwake.app.alarm.RingState
 import com.fitwake.app.edit.EditAlarmScreen
 import com.fitwake.app.home.HomeScreen
 import com.fitwake.app.onboarding.OnboardingScreen
+import com.fitwake.app.settings.SettingsScreen
+import com.fitwake.app.stats.StatsScreen
 import com.fitwake.app.ringing.RingingActivity
 import com.fitwake.app.ui.FitWakeTheme
 
@@ -48,6 +50,8 @@ private sealed interface Screen {
     data object Home : Screen
     /** id가 null이면 새 알람. */
     data class Edit(val alarmId: Long?) : Screen
+    data object Stats : Screen
+    data object Settings : Screen
 }
 
 @Composable
@@ -61,7 +65,14 @@ private fun FitWakeApp() {
         Screen.Home -> HomeScreen(
             onAdd = { screen = Screen.Edit(null) },
             onEdit = { screen = Screen.Edit(it.id) },
+            onStats = { screen = Screen.Stats },
+            onSettings = { screen = Screen.Settings },
         )
         is Screen.Edit -> EditAlarmScreen(s.alarmId, onDone = { screen = Screen.Home })
+        Screen.Stats -> StatsScreen(onBack = { screen = Screen.Home })
+        Screen.Settings -> SettingsScreen(
+            onBack = { screen = Screen.Home },
+            onReplayOnboarding = { screen = Screen.Onboarding },
+        )
     }
 }

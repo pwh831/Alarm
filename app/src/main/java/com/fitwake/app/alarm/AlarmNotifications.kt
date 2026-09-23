@@ -12,9 +12,12 @@ import com.fitwake.app.ringing.RingingActivity
 
 object AlarmNotifications {
     const val CHANNEL_ID = "alarm_ringing"
+    const val CHANNEL_WAKE_CHECK = "wake_check"
     const val NOTIFICATION_ID = 1001
+    const val WAKE_CHECK_NOTIFICATION_ID = 1002
 
-    fun createChannel(context: Context) {
+    fun createChannels(context: Context) {
+        val manager = context.getSystemService(NotificationManager::class.java)
         val channel = NotificationChannel(
             CHANNEL_ID,
             context.getString(R.string.channel_alarm),
@@ -27,8 +30,31 @@ object AlarmNotifications {
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             setBypassDnd(true)
         }
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        val wakeCheck = NotificationChannel(
+            CHANNEL_WAKE_CHECK,
+            context.getString(R.string.channel_wake_check),
+            NotificationManager.IMPORTANCE_HIGH,
+        ).apply {
+            description = context.getString(R.string.channel_wake_check_description)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        }
+        manager.createNotificationChannels(listOf(channel, wakeCheck))
     }
+
+    /** "일어나 계신가요?" 알림. 누르거나 버튼을 누르면 확인된다 (PRD WK-01). */
+    fun wakeCheck(context: Context, confirm: PendingIntent, timeoutMs: Long): Notification =
+        NotificationCompat.Builder(context, CHANNEL_WAKE_CHECK)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(context.getString(R.string.wake_check_title))
+            .setContentText(context.getString(R.string.wake_check_text))
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(confirm)
+            .addAction(0, context.getString(R.string.wake_check_confirm), confirm)
+            .setAutoCancel(true)
+            .setTimeoutAfter(timeoutMs)
+            .build()
 
     /** 잠금 화면에서는 전체 화면으로 RingingActivity를 띄우고, 사용 중일 때는 헤드업 알림으로 뜬다. */
     fun ringing(context: Context, label: String): Notification {

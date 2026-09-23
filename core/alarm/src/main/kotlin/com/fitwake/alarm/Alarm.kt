@@ -26,6 +26,10 @@ data class Alarm(
     val soundUri: String? = null,
     val vibrate: Boolean = true,
     val volumeRamp: Boolean = true,
+    /** 스누즈 허용 (PRD AL-08). 기본은 꺼짐. */
+    val snoozeEnabled: Boolean = false,
+    /** 미션으로 끈 뒤 5분 후 기상 재확인 (PRD WK-01). */
+    val wakeCheck: Boolean = false,
 ) {
     init {
         require(hour in 0..23 && minute in 0..59) { "invalid time $hour:$minute" }

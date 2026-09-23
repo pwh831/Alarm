@@ -126,4 +126,43 @@
     <string name="onboarding_trial_done">%1$d초 만에 성공했어요! 이제 첫 알람을 만들어 보세요.</string>
     <string name="onboarding_skip_trial">건너뛰기</string>
     <string name="onboarding_finish">시작하기</string>
+    <!-- 스누즈·기상 확인 -->
+    <string name="snooze_setting">스누즈 허용</string>
+    <string name="snooze_setting_desc">%1$d분 뒤 다시 울려요. 최대 %2$d번, 누를 때도 %3$d회 미션을 해야 해요.</string>
+    <string name="wake_check_setting">기상 재확인</string>
+    <string name="wake_check_setting_desc">알람을 끄고 5분 뒤 확인 알림이 와요. 1분 안에 누르지 않으면 알람이 다시 울려요.</string>
+    <string name="snooze_button">%1$d분 뒤 다시 (%2$d회 미션 · %3$d번 남음)</string>
+    <string name="snoozed_title">스누즈</string>
+    <string name="snoozed_body">%1$d분 뒤에 다시 울려요.</string>
+    <string name="channel_wake_check">기상 재확인</string>
+    <string name="channel_wake_check_description">알람을 끈 뒤 정말 일어났는지 확인해요</string>
+    <string name="wake_check_title">일어나 계신가요?</string>
+    <string name="wake_check_text">1분 안에 누르지 않으면 알람이 다시 울려요</string>
+    <string name="wake_check_confirm">일어났어요</string>
+
+    <!-- 기록·통계 -->
+    <string name="back">‹ 뒤로</string>
+    <string name="stats">기록</string>
+    <string name="streak_label">연속 기상</string>
+    <string name="streak_days">%1$d일</string>
+    <string name="this_week">이번 주</string>
+    <string name="this_month">이번 달</string>
+    <string name="reps_line">%1$s %2$d회</string>
+    <string name="avg_dismiss">평균 %1$d분 %2$d초 만에 알람을 껐어요</string>
+    <string name="avg_dismiss_none">아직 미션으로 끈 알람이 없어요</string>
+    <string name="month_emergency">이번 달 긴급 해제 %1$d번</string>
+    <string name="month_pattern">yyyy년 M월</string>
+    <string name="recent_records">최근 기록</string>
+    <string name="no_records">아직 기록이 없어요. 알람이 울리고 미션을 마치면 여기에 쌓여요.</string>
+    <string name="record_mission">%1$s %2$d회 · %3$d분 %4$d초</string>
+    <string name="record_emergency">긴급 해제</string>
+    <string name="record_snoozed">스누즈 %1$d번</string>
+
+    <!-- 설정 -->
+    <string name="settings">설정</string>
+    <string name="default_mission">새 알람 기본 미션</string>
+    <string name="default_mission_desc">새 알람을 만들 때 이 설정으로 시작해요.</string>
+    <string name="saved">저장됨</string>
+    <string name="replay_onboarding">처음 안내 다시 보기</string>
+    <string name="about">FitWake %1$s · 카메라 영상은 기기 밖으로 전송되거나 저장되지 않아요.</string>
 </resources>

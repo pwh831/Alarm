@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
@@ -17,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,7 +44,7 @@ import java.time.Duration
 import java.time.ZonedDateTime
 
 @Composable
-fun HomeScreen(onAdd: () -> Unit, onEdit: (Alarm) -> Unit) {
+fun HomeScreen(onAdd: () -> Unit, onEdit: (Alarm) -> Unit, onStats: () -> Unit, onSettings: () -> Unit) {
     val context = LocalContext.current
     val repository = context.alarmRepository
     val alarms by repository.alarms.collectAsStateWithLifecycle(initialValue = null)
@@ -72,7 +72,15 @@ fun HomeScreen(onAdd: () -> Unit, onEdit: (Alarm) -> Unit) {
         ) {
             item {
                 Column(Modifier.padding(vertical = 8.dp)) {
-                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            stringResource(R.string.app_name),
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = onStats) { Text(stringResource(R.string.stats)) }
+                        TextButton(onClick = onSettings) { Text(stringResource(R.string.settings)) }
+                    }
                     val next = alarms?.nextAlarm(now)
                     Text(
                         if (next == null) {
