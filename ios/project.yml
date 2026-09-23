@@ -1,0 +1,32 @@
+name: FitWake
+options:
+  bundleIdPrefix: com.fitwake
+  deploymentTarget:
+    iOS: "26.0"
+packages:
+  FitWakeCore:
+    path: FitWakeCore
+targets:
+  FitWake:
+    type: application
+    platform: iOS
+    sources: [FitWake]
+    dependencies:
+      - package: FitWakeCore
+    scheme: {}
+    info:
+      path: FitWake/Info.plist
+      properties:
+        CFBundleDisplayName: FitWake
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSCameraUsageDescription: 운동 횟수를 세기 위해 카메라를 사용해요. 영상은 기기 밖으로 전송되거나 저장되지 않아요.
+        NSAlarmKitUsageDescription: 정해진 시간에 잠금 화면에서도 알람을 울리기 위해 필요해요.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fitwake.app
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO

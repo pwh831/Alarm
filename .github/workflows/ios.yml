@@ -1,0 +1,68 @@
+name: iOS
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  pull_request:
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+
+      # AlarmKit(iOS 26)을 쓰므로 Xcode 26 이상이 필요하다.
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Core unit tests
+        run: swift test --package-path FitWakeCore
+
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      # 서명하지 않은 IPA. 설치할 때 Sideloadly 등이 무료 Apple ID로 서명한다.
+      - name: Build unsigned IPA
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project FitWake.xcodeproj \
+            -scheme FitWake \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee build.log | grep -E "error:|warning: .*deprecated|BUILD (SUCCEEDED|FAILED)" || true
+          test -d build/Build/Products/Release-iphoneos/FitWake.app
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/FitWake.app Payload/
+          zip -qr FitWake.ipa Payload
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ios/build.log
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: FitWake-ipa
+          path: ios/FitWake.ipa
+          retention-days: 30

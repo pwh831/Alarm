@@ -33,6 +33,9 @@ jobs:
       - name: Lint
         run: ./gradlew :app:lintDebug
 
+      - name: App smoke test (Robolectric, API 29 and 35)
+        run: ./gradlew :app:testDebugUnitTest
+
       - name: Upload reports
         if: failure()
         uses: actions/upload-artifact@v4
@@ -40,6 +43,7 @@ jobs:
           name: reports
           path: |
             core/*/build/reports/tests/
+            app/build/reports/tests/
             app/build/reports/lint-results-debug.html
 
       - name: Upload debug APK
