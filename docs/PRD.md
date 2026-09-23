@@ -2,10 +2,10 @@
 
 | 항목 | 내용 |
 |---|---|
-| 문서 버전 | v0.1 (초안) |
+| 문서 버전 | v0.2 (기술 스택 확정) |
 | 작성일 | 2026-09-23 |
 | 상태 | Draft |
-| 대상 플랫폼 | iOS / Android (MVP는 Android 우선 권장, 아래 "플랫폼 제약" 참고) |
+| 대상 플랫폼 | Android (MVP, Kotlin 네이티브) → iOS (Swift, 후속) |
 
 ---
 
@@ -239,7 +239,19 @@
   - AlarmKit을 쓸 수 없는 버전에서는 Critical Alert(별도 승인 필요)나 반복 로컬 알림 + 오디오 세션 유지 방식으로 대체. 이 경우 "알람 끄기를 막을 수 없다"는 한계를 사용자에게 투명하게 안내
 - 앱을 강제 종료하면 알람을 다시 울리기 어렵다 → 반복 로컬 알림으로 부분 대응
 
-**권장 사항**: MVP는 **Android 네이티브(Kotlin) 우선 출시**로 신뢰성을 검증하고, iOS는 AlarmKit 기반으로 뒤따라 출시한다. 크로스플랫폼(Flutter/React Native)을 선택하더라도 알람 스케줄링과 카메라 포즈 추정은 네이티브 모듈로 구현해야 한다.
+**결정 (v0.2)**: MVP는 **Android 네이티브(Kotlin) 우선 출시**로 신뢰성을 검증하고, iOS는 Swift + AlarmKit으로 뒤따라 출시한다.
+
+- 이유: 이 앱의 핵심인 알람 스케줄링과 카메라 포즈 추정은 어느 방식이든 네이티브로 작성해야 한다. 크로스플랫폼으로 아낄 수 있는 부분은 목록·설정·통계 같은 비교적 쉬운 화면뿐이다.
+
+| 영역 | Android (MVP) | iOS (2단계) |
+|---|---|---|
+| UI | Jetpack Compose | SwiftUI |
+| 알람 | `AlarmManager.setAlarmClock` + 포그라운드 서비스 + `BOOT_COMPLETED` | AlarmKit |
+| 카메라 | CameraX | AVFoundation |
+| 포즈 추정 | ML Kit Pose Detection (정확도가 부족하면 MediaPipe로 교체) | Vision 또는 MediaPipe |
+| 저장소 | Room | SwiftData |
+
+- 반복 횟수 판정 로직(관절 각도 상태 머신)은 플랫폼과 무관한 순수 Kotlin 모듈(`core/pose`)로 분리한다. 이렇게 하면 JVM 단위 테스트로 검증할 수 있고, iOS에서는 Kotlin Multiplatform으로 재사용하거나 같은 테스트 케이스로 Swift 버전을 따로 검증할 수 있다.
 
 ---
 
@@ -359,7 +371,7 @@ WakeLog
 ---
 
 ## 14. 미결 사항 (Open Questions)
-1. MVP 기술 스택: 네이티브(Kotlin/Swift)로 갈지, 크로스플랫폼(Flutter + 네이티브 모듈)으로 갈지?
+1. ~~MVP 기술 스택~~ → **결정됨**: Android 네이티브(Kotlin) 우선, iOS는 Swift로 후속 개발 (7.2 참고)
 2. 전면 카메라와 후면 카메라 중 기본값은? (전면은 사용자가 화면을 볼 수 있고, 후면은 화질과 광각이 유리함)
 3. 긴급 해제 수단을 무엇으로 할지? (긴 문장 타이핑 / 30초 대기 / 둘 다)
 4. 푸시업을 정면에서 찍을 때도 인식을 지원할지, 측면만 지원할지?
