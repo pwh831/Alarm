@@ -93,15 +93,9 @@
     <string name="allow">허용</string>
     <string name="done_check">완료</string>
     <string name="onboarding_welcome_title">운동해야 꺼지는 알람</string>
-    <string name="onboarding_welcome_body">FitWake 알람은 버튼으로 꺼지지 않아요.
-스쿼트나 푸시업을 정해진 횟수만큼 해야 꺼져요. 몸을 움직이면 잠이 확실히 깨요.</string>
+    <string name="onboarding_welcome_body">FitWake 알람은 버튼으로 꺼지지 않아요.\n스쿼트나 푸시업을 정해진 횟수만큼 해야 꺼져요. 몸을 움직이면 잠이 확실히 깨요.</string>
     <string name="onboarding_how_title">이렇게 동작해요</string>
-    <string name="onboarding_how_body">1. 알람이 울리면 '미션 시작'을 눌러요.
-2. 폰을 바닥이나 선반에 세우고 2~3m 떨어져요.
-3. 카메라가 몸을 인식하면 3초 뒤부터 횟수를 세요.
-4. 목표 횟수를 채우면 알람이 꺼져요.
-
-미션을 하는 동안 알람 소리는 작아지지만, 1분 동안 움직이지 않으면 다시 커져요.</string>
+    <string name="onboarding_how_body">1. 알람이 울리면 \'미션 시작\'을 눌러요.\n2. 폰을 바닥이나 선반에 세우고 2~3m 떨어져요.\n3. 카메라가 몸을 인식하면 3초 뒤부터 횟수를 세요.\n4. 목표 횟수를 채우면 알람이 꺼져요.\n\n미션을 하는 동안 알람 소리는 작아지지만, 1분 동안 움직이지 않으면 다시 커져요.</string>
     <string name="onboarding_privacy_title">카메라 영상은 폰 밖으로 나가지 않아요</string>
     <string name="onboarding_privacy_body">운동 인식은 모두 폰 안에서 처리돼요. 영상은 서버로 보내지 않고 저장하지도 않아요. 인터넷이 없어도 동작해요.</string>
     <string name="onboarding_permissions_title">알람이 확실히 울리도록 설정해 주세요</string>
@@ -112,14 +106,12 @@
     <string name="onboarding_battery_body">일부 휴대폰은 배터리를 아끼려고 앱을 강제로 멈춰요. 그러면 알람이 울리지 않아요. 아래 설정을 한 번만 해 주세요.</string>
     <string name="open_app_settings">앱 설정 열기</string>
     <string name="battery_more_info">다른 기기 설정 방법 보기 (dontkillmyapp.com)</string>
-    <string name="battery_guide_samsung">삼성: 설정 → 배터리 → 백그라운드 사용 제한 → '절전 예외 앱'에 FitWake 추가.
-'사용하지 않는 앱을 절전 상태로 전환'도 꺼 두는 것을 권장해요.</string>
-    <string name="battery_guide_xiaomi">샤오미: 설정 → 앱 → 앱 관리 → FitWake → '자동 시작' 켜기, '배터리 절약'은 '제한 없음'으로.
-최근 앱 화면에서 FitWake를 아래로 끌어 잠가 두면 더 안전해요.</string>
-    <string name="battery_guide_huawei">화웨이·아너: 설정 → 배터리 → 앱 실행 → FitWake의 '자동 관리'를 끄고 자동 실행·보조 실행·백그라운드 실행을 모두 켜기.</string>
-    <string name="battery_guide_oppo">오포·리얼미·원플러스: 설정 → 배터리 → FitWake → '백그라운드 활동 허용' 켜기, 자동 시작 허용.</string>
-    <string name="battery_guide_vivo">비보: 설정 → 배터리 → 백그라운드 전력 소비 관리 → FitWake '허용'. 자동 시작도 켜기.</string>
-    <string name="battery_guide_other">설정 → 앱 → FitWake → 배터리에서 '제한 없음'(또는 '최적화 안 함')을 선택해 주세요.</string>
+    <string name="battery_guide_samsung">삼성: 설정 → 배터리 → 백그라운드 사용 제한 → \'절전 예외 앱\'에 FitWake 추가.\n\'사용하지 않는 앱을 절전 상태로 전환\'도 꺼 두는 것을 권장해요.</string>
+    <string name="battery_guide_xiaomi">샤오미: 설정 → 앱 → 앱 관리 → FitWake → \'자동 시작\' 켜기, \'배터리 절약\'은 \'제한 없음\'으로.\n최근 앱 화면에서 FitWake를 아래로 끌어 잠가 두면 더 안전해요.</string>
+    <string name="battery_guide_huawei">화웨이·아너: 설정 → 배터리 → 앱 실행 → FitWake의 \'자동 관리\'를 끄고 자동 실행·보조 실행·백그라운드 실행을 모두 켜기.</string>
+    <string name="battery_guide_oppo">오포·리얼미·원플러스: 설정 → 배터리 → FitWake → \'백그라운드 활동 허용\' 켜기, 자동 시작 허용.</string>
+    <string name="battery_guide_vivo">비보: 설정 → 배터리 → 백그라운드 전력 소비 관리 → FitWake \'허용\'. 자동 시작도 켜기.</string>
+    <string name="battery_guide_other">설정 → 앱 → FitWake → 배터리에서 \'제한 없음\'(또는 \'최적화 안 함\')을 선택해 주세요.</string>
     <string name="onboarding_trial_title">한 번 해볼까요?</string>
     <string name="onboarding_trial_body">스쿼트 %1$d회로 카메라 인식이 잘 되는지 확인해 보세요. 폰을 세워 두고 전신이 보이게 서면 돼요.</string>
     <string name="onboarding_trial_start">체험 시작</string>
