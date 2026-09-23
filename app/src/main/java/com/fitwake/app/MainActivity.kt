@@ -1,5 +1,6 @@
 package com.fitwake.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,13 +13,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.fitwake.app.mission.DoneScreen
-import com.fitwake.app.mission.MissionConfig
-import com.fitwake.app.mission.MissionScreen
-import com.fitwake.app.setup.SetupScreen
+import com.fitwake.app.alarm.AlarmService
+import com.fitwake.app.alarm.RingState
+import com.fitwake.app.edit.EditAlarmScreen
+import com.fitwake.app.home.HomeScreen
+import com.fitwake.app.ringing.RingingActivity
 import com.fitwake.app.ui.FitWakeTheme
-import com.fitwake.pose.Difficulty
-import com.fitwake.pose.Exercise
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,41 +31,30 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        // 알람이 울리는 중에 앱을 열면 곧바로 알람 화면으로 보낸다.
+        if (AlarmService.state.value != RingState.Idle) {
+            startActivity(Intent(this, RingingActivity::class.java))
+        }
+    }
 }
 
 private sealed interface Screen {
-    data object Setup : Screen
-    data class Mission(val config: MissionConfig) : Screen
-    data class Done(val config: MissionConfig, val elapsedSec: Int) : Screen
+    data object Home : Screen
+    /** id가 null이면 새 알람. */
+    data class Edit(val alarmId: Long?) : Screen
 }
 
-/**
- * M0 기술 검증용 흐름: 미션 설정 → 카메라 미션 → 완료.
- * 알람 스케줄링(M1)이 붙으면 알람이 울릴 때 Mission 화면으로 바로 진입한다.
- */
 @Composable
 private fun FitWakeApp() {
-    var screen by remember { mutableStateOf<Screen>(Screen.Setup) }
-    var lastConfig by remember { mutableStateOf(MissionConfig(Exercise.SQUAT, Difficulty.NORMAL, 15)) }
-
+    var screen by remember { mutableStateOf<Screen>(Screen.Home) }
     when (val s = screen) {
-        Screen.Setup -> SetupScreen(
-            initial = lastConfig,
-            onStart = {
-                lastConfig = it
-                screen = Screen.Mission(it)
-            },
+        Screen.Home -> HomeScreen(
+            onAdd = { screen = Screen.Edit(null) },
+            onEdit = { screen = Screen.Edit(it.id) },
         )
-        is Screen.Mission -> MissionScreen(
-            config = s.config,
-            onComplete = { sec -> screen = Screen.Done(s.config, sec) },
-            onQuit = { screen = Screen.Setup },
-        )
-        is Screen.Done -> DoneScreen(
-            config = s.config,
-            elapsedSec = s.elapsedSec,
-            onAgain = { screen = Screen.Mission(s.config) },
-            onBack = { screen = Screen.Setup },
-        )
+        is Screen.Edit -> EditAlarmScreen(s.alarmId, onDone = { screen = Screen.Home })
     }
 }

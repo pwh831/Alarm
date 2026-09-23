@@ -22,3 +22,8 @@ fun Difficulty.label(): String = stringResource(
         Difficulty.HARD -> R.string.difficulty_hard
     },
 )
+
+/** "스쿼트 15회 · 보통" */
+@Composable
+fun difficultyAndReps(exercise: Exercise, difficulty: Difficulty, reps: Int): String =
+    stringResource(R.string.mission_summary, exercise.label(), reps, difficulty.label())

@@ -23,3 +23,4 @@ dependencyResolutionManagement {
 rootProject.name = "FitWake"
 include(":app")
 include(":core:pose")
+include(":core:alarm")

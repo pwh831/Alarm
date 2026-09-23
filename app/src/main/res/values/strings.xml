@@ -2,8 +2,38 @@
 <resources>
     <string name="app_name">FitWake</string>
 
-    <string name="setup_title">미션 테스트</string>
-    <string name="setup_subtitle">카메라로 운동 횟수가 잘 세어지는지 확인해 보세요.</string>
+    <!-- 홈 -->
+    <string name="add_alarm">+ 알람 추가</string>
+    <string name="empty_alarms">아직 알람이 없어요.\n오른쪽 아래 버튼으로 첫 알람을 만들어 보세요.</string>
+    <string name="no_upcoming_alarm">켜진 알람이 없어요</string>
+    <string name="remaining_days">%1$d일 %2$d시간 후에 울려요</string>
+    <string name="remaining_hours">%1$d시간 %2$d분 후에 울려요</string>
+    <string name="remaining_minutes">%1$d분 후에 울려요</string>
+    <string name="repeat_once">한 번만</string>
+    <string name="repeat_every_day">매일</string>
+    <string name="repeat_weekdays">평일</string>
+    <string name="repeat_weekends">주말</string>
+    <string name="mission_summary">%1$s %2$d회 · %3$s</string>
+
+    <!-- 권한 -->
+    <string name="perm_panel_title">알람이 제대로 울리려면 설정이 필요해요</string>
+    <string name="perm_notifications">알림 허용</string>
+    <string name="perm_notifications_desc">알림이 꺼져 있으면 잠금 화면에 알람이 뜨지 않아요.</string>
+    <string name="perm_exact_alarm">정확한 알람 허용</string>
+    <string name="perm_exact_alarm_desc">허용하지 않으면 알람이 몇 분 늦게 울릴 수 있어요.</string>
+    <string name="perm_full_screen">전체 화면 알림 허용</string>
+    <string name="perm_full_screen_desc">잠금 화면 위에 알람 화면을 띄우는 데 필요해요.</string>
+    <string name="perm_camera">카메라 허용</string>
+    <string name="perm_camera_desc">운동 인식에 필요해요. 영상은 기기 밖으로 전송되거나 저장되지 않아요.</string>
+    <string name="perm_battery">배터리 최적화 제외</string>
+    <string name="perm_battery_desc">배터리 최적화가 켜져 있으면 일부 기기에서 알람이 울리지 않을 수 있어요. 목록에서 FitWake를 \'제한 없음\'으로 바꿔주세요.</string>
+
+    <!-- 알람 편집 -->
+    <string name="new_alarm">새 알람</string>
+    <string name="edit_alarm">알람 편집</string>
+    <string name="repeat">반복</string>
+    <string name="label">이름 (선택)</string>
+    <string name="mission">미션</string>
     <string name="exercise">운동</string>
     <string name="exercise_squat">스쿼트</string>
     <string name="exercise_pushup">푸시업</string>
@@ -12,13 +42,35 @@
     <string name="difficulty_normal">보통</string>
     <string name="difficulty_hard">어려움</string>
     <string name="target_reps">목표 %1$d회</string>
-    <string name="start">시작</string>
+    <string name="preview_mission">미리 해보기</string>
+    <string name="preview_success">성공! %1$d초 걸렸어요</string>
+    <string name="sound">알람음</string>
+    <string name="sound_default">기본 알람음</string>
+    <string name="vibrate">진동</string>
+    <string name="volume_ramp">볼륨 점점 크게</string>
+    <string name="save">저장</string>
+    <string name="delete">삭제</string>
 
+    <!-- 알람 울림 -->
+    <string name="channel_alarm">알람</string>
+    <string name="channel_alarm_description">울리는 알람을 표시해요</string>
+    <string name="notification_ringing_text">미션을 완료해야 알람이 꺼져요</string>
+    <string name="ringing_prompt">일어날 시간이에요! 미션을 완료해야 알람이 꺼져요</string>
+    <string name="start_mission">미션 시작</string>
+    <string name="emergency_dismiss">긴급 해제</string>
+    <string name="emergency_instructions">정말 급한 상황일 때만 쓰세요. 아래 문장을 그대로 입력하면 알람이 꺼져요.</string>
+    <string name="emergency_phrase">나는 지금 완전히 깨어 있고 운동 대신 알람을 끄기로 선택합니다</string>
+    <string name="emergency_confirm">알람 끄기</string>
+    <string name="cancel">취소</string>
+    <string name="done_title">미션 완료!</string>
+    <string name="done_body_alarm">%1$d초 만에 알람을 껐어요. 좋은 하루 보내세요!</string>
+    <string name="close">닫기</string>
+
+    <!-- 미션 -->
     <string name="camera_permission_needed">운동을 인식하려면 카메라 권한이 필요해요.\n영상은 기기 밖으로 전송되거나 저장되지 않아요.</string>
     <string name="grant_permission">권한 허용</string>
     <string name="switch_camera">카메라 전환</string>
     <string name="quit">그만하기</string>
-
     <string name="hint_get_ready_squat">전신이 보이도록 2~3m 떨어져서 똑바로 서세요</string>
     <string name="hint_get_ready_pushup">폰을 옆에 두고 팔을 편 플랭크 자세를 잡으세요</string>
     <string name="hint_go">좋아요! 계속하세요</string>
@@ -27,8 +79,4 @@
     <string name="hint_lower_hips">엉덩이를 더 내려주세요</string>
     <string name="hint_get_horizontal">몸을 바닥과 수평으로 만들어주세요</string>
     <string name="hint_keep_body_straight">어깨부터 발끝까지 일직선을 유지하세요</string>
-
-    <string name="done_title">미션 완료!</string>
-    <string name="done_body">%1$s %2$d회를 %3$d초 만에 끝냈어요.</string>
-    <string name="again">다시 하기</string>
 </resources>

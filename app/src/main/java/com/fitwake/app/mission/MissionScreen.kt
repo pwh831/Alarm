@@ -66,7 +66,12 @@ import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
 
 @Composable
-fun MissionScreen(config: MissionConfig, onComplete: (elapsedSec: Int) -> Unit, onQuit: () -> Unit) {
+fun MissionScreen(
+    config: MissionConfig,
+    onComplete: (elapsedSec: Int) -> Unit,
+    onQuit: () -> Unit,
+    onRep: () -> Unit = {},
+) {
     val context = LocalContext.current
     var hasPermission by remember {
         mutableStateOf(
@@ -80,7 +85,7 @@ fun MissionScreen(config: MissionConfig, onComplete: (elapsedSec: Int) -> Unit, 
 
     if (hasPermission) {
         KeepScreenOnAndBright()
-        MissionCamera(config, onComplete, onQuit)
+        MissionCamera(config, onComplete, onQuit, onRep)
     } else {
         Column(
             Modifier
@@ -100,11 +105,17 @@ fun MissionScreen(config: MissionConfig, onComplete: (elapsedSec: Int) -> Unit, 
 }
 
 @Composable
-private fun MissionCamera(config: MissionConfig, onComplete: (Int) -> Unit, onQuit: () -> Unit) {
+private fun MissionCamera(
+    config: MissionConfig,
+    onComplete: (Int) -> Unit,
+    onQuit: () -> Unit,
+    onRep: () -> Unit,
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val haptics = LocalHapticFeedback.current
     val currentOnComplete by rememberUpdatedState(onComplete)
+    val currentOnRep by rememberUpdatedState(onRep)
 
     val counter = remember(config) { RepCounter.create(config.exercise, config.difficulty) }
     var repState by remember { mutableStateOf(RepState(0, Phase.WAITING, Hint.NONE, null)) }
@@ -141,6 +152,7 @@ private fun MissionCamera(config: MissionConfig, onComplete: (Int) -> Unit, onQu
                     if (repState.reps > before) {
                         tone.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        currentOnRep()
                     }
                 }
             },
@@ -241,10 +253,12 @@ private fun KeepScreenOnAndBright() {
     DisposableEffect(activity) {
         val window = activity.window
         val previous = window.attributes.screenBrightness
+        val hadKeepScreenOn = window.attributes.flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON != 0
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         window.attributes = window.attributes.apply { screenBrightness = 1f }
         onDispose {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            // 알람 화면처럼 원래 켜 두던 곳에서는 그대로 둔다.
+            if (!hadKeepScreenOn) window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             window.attributes = window.attributes.apply { screenBrightness = previous }
         }
     }
