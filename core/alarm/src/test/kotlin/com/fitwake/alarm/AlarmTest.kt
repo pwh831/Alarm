@@ -74,6 +74,14 @@ class AlarmTest {
     }
 
     @Test
+    fun randomMissionPicksFromPool() {
+        val alarm = Alarm(hour = 7, minute = 0, exercise = null)
+        val picked = (1..50).map { alarm.pickExercise(kotlin.random.Random(it)) }.toSet()
+        assertEquals(RANDOM_EXERCISES.toSet(), picked)
+        assertEquals(com.fitwake.pose.Exercise.ARM_RAISE, alarm.copy(exercise = com.fitwake.pose.Exercise.ARM_RAISE).pickExercise())
+    }
+
+    @Test
     fun dayMaskRoundTrip() {
         val days = setOf(MONDAY, WEDNESDAY, SATURDAY, SUNDAY)
         assertEquals(0b1100101, DayMask.toMask(days))

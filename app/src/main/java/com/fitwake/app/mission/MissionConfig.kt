@@ -10,4 +10,5 @@ data class MissionConfig(
     val targetReps: Int,
 )
 
-fun Alarm.missionConfig() = MissionConfig(exercise, difficulty, targetReps)
+/** 랜덤 미션이면 [exercise]를 미리 정해서 넘긴다. */
+fun Alarm.missionConfig(exercise: Exercise = pickExercise()) = MissionConfig(exercise, difficulty, targetReps)

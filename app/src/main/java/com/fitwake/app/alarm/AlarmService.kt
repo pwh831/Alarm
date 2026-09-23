@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import com.fitwake.alarm.Alarm
 import com.fitwake.alarm.RingVolumePolicy
 import com.fitwake.app.alarmRepository
+import com.fitwake.pose.Exercise
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,7 +31,8 @@ sealed interface RingState {
     data object Idle : RingState
     /** 서비스가 알람 정보를 불러오는 중. */
     data object Starting : RingState
-    data class Ringing(val alarm: Alarm) : RingState
+    /** [exercise]는 이번에 할 운동. 랜덤 미션도 울리는 동안에는 바뀌지 않는다. */
+    data class Ringing(val alarm: Alarm, val exercise: Exercise) : RingState
 }
 
 /**
@@ -95,7 +97,7 @@ class AlarmService : Service() {
             // 이미 다른 알람이 울리는 중이면 그 알람을 끌 때 같이 끝난다.
             if (_state.value is RingState.Ringing) return@launch
 
-            _state.value = RingState.Ringing(alarm)
+            _state.value = RingState.Ringing(alarm, alarm.pickExercise())
             ringStartMs = SystemClock.elapsedRealtime()
             lastProgressMs = ringStartMs
             missionActive = false

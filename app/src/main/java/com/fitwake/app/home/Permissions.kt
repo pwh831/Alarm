@@ -49,7 +49,7 @@ fun Context.missingRequirements(): List<Requirement> = Requirement.entries.filte
 private fun Context.granted(permission: String) =
     ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 
-private fun Context.isSatisfied(r: Requirement): Boolean = when (r) {
+fun Context.isSatisfied(r: Requirement): Boolean = when (r) {
     Requirement.NOTIFICATIONS ->
         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || granted(Manifest.permission.POST_NOTIFICATIONS)
     Requirement.EXACT_ALARM -> AlarmScheduler(this).canScheduleExact()
@@ -90,7 +90,7 @@ fun PermissionPanel(modifier: Modifier = Modifier) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
-                TextButton(onClick = { context.fix(r) { requestPermission.launch(it) } }) {
+                TextButton(onClick = { context.fixRequirement(r) { requestPermission.launch(it) } }) {
                     Text(stringResource(r.title))
                 }
             }
@@ -98,7 +98,8 @@ fun PermissionPanel(modifier: Modifier = Modifier) {
     }
 }
 
-private fun Context.fix(r: Requirement, request: (String) -> Unit) {
+/** 권한 요청 대화상자나 해당 설정 화면을 연다. [request]는 런타임 권한 요청 런처. */
+fun Context.fixRequirement(r: Requirement, request: (String) -> Unit) {
     val pkg = Uri.parse("package:$packageName")
     when (r) {
         Requirement.NOTIFICATIONS -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -106,17 +107,17 @@ private fun Context.fix(r: Requirement, request: (String) -> Unit) {
         }
         Requirement.CAMERA -> request(Manifest.permission.CAMERA)
         Requirement.EXACT_ALARM -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            open(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg))
+            openSettings(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg))
         }
         Requirement.FULL_SCREEN -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            open(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, pkg))
+            openSettings(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, pkg))
         }
         // 앱 목록에서 직접 '제한 없음'을 고르게 한다. 제조사별 추가 설정은 M2 온보딩에서 안내.
-        Requirement.BATTERY -> open(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        Requirement.BATTERY -> openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
     }
 }
 
-private fun Context.open(intent: Intent) {
+fun Context.openSettings(intent: Intent) {
     runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         .onFailure { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) }
 }

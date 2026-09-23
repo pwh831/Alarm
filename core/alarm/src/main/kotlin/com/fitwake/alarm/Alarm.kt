@@ -5,6 +5,10 @@ import com.fitwake.pose.Exercise
 import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.ZonedDateTime
+import kotlin.random.Random
+
+/** 랜덤 미션 후보. 저강도 대체 미션(팔 올리기)은 사용자가 직접 골랐을 때만 쓴다. */
+val RANDOM_EXERCISES = listOf(Exercise.SQUAT, Exercise.PUSHUP)
 
 data class Alarm(
     val id: Long = 0,
@@ -14,7 +18,8 @@ data class Alarm(
     val repeatDays: Set<DayOfWeek> = emptySet(),
     val label: String = "",
     val enabled: Boolean = true,
-    val exercise: Exercise = Exercise.SQUAT,
+    /** null이면 울릴 때마다 [RANDOM_EXERCISES] 중 무작위 (PRD MS-07). */
+    val exercise: Exercise? = Exercise.SQUAT,
     val difficulty: Difficulty = Difficulty.NORMAL,
     val targetReps: Int = 15,
     /** null이면 기기 기본 알람음. */
@@ -27,6 +32,9 @@ data class Alarm(
     }
 
     val isRepeating: Boolean get() = repeatDays.isNotEmpty()
+
+    /** 이번에 할 운동. 랜덤 미션이면 여기서 정해진다. */
+    fun pickExercise(random: Random = Random.Default): Exercise = exercise ?: RANDOM_EXERCISES.random(random)
 
     /**
      * [now] 이후(같은 시각 제외) 처음 울릴 시각.

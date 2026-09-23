@@ -53,6 +53,23 @@ object Poses {
         return side(shoulder, elbow, wrist, hip, knee, ankle)
     }
 
+    /**
+     * 정면에서 본 팔 올리기. [leftDeg]/[rightDeg]는 엉덩이-어깨-손목 각도 (0 = 내림, 180 = 머리 위).
+     */
+    fun armRaise(leftDeg: Double, rightDeg: Double = leftDeg): Map<Landmark, Point> {
+        fun arm(shoulder: Point, deg: Double, dir: Float): Point {
+            val t = Math.toRadians(deg)
+            return Point(shoulder.x + dir * 0.25f * sin(t).toFloat(), shoulder.y + 0.25f * cos(t).toFloat())
+        }
+        val ls = Point(0.4f, 0.3f)
+        val rs = Point(0.6f, 0.3f)
+        return mapOf(
+            Landmark.LEFT_SHOULDER to ls, Landmark.RIGHT_SHOULDER to rs,
+            Landmark.LEFT_HIP to Point(0.4f, 0.6f), Landmark.RIGHT_HIP to Point(0.6f, 0.6f),
+            Landmark.LEFT_WRIST to arm(ls, leftDeg, -1f), Landmark.RIGHT_WRIST to arm(rs, rightDeg, 1f),
+        )
+    }
+
     /** 선 채로 팔만 굽히기. */
     fun standingArmCurl(elbowDeg: Double): Map<Landmark, Point> {
         val shoulder = Point(0.5f, 0.3f)

@@ -1,16 +1,23 @@
 package com.fitwake.pose
 
-enum class Exercise { PUSHUP, SQUAT }
+enum class Exercise {
+    PUSHUP,
+    SQUAT,
+    /** 부상이나 공간 제약이 있을 때 쓰는 저강도 대체 미션 (PRD MS-10). */
+    ARM_RAISE,
+}
 
 /** PRD 5.3 난이도별 기준. */
 enum class Difficulty(
     val squatBottomKneeDeg: Double,
     val pushupBottomElbowDeg: Double,
     val allowKneePushup: Boolean,
+    /** 팔 올리기: 엉덩이-어깨-손목 각도가 이 이상이어야 1회. */
+    val armRaiseMinShoulderDeg: Double,
 ) {
-    EASY(120.0, 110.0, true),
-    NORMAL(100.0, 90.0, false),
-    HARD(85.0, 75.0, false),
+    EASY(120.0, 110.0, true, 90.0),
+    NORMAL(100.0, 90.0, false, 140.0),
+    HARD(85.0, 75.0, false, 160.0),
 }
 
 data class CounterConfig(
@@ -41,6 +48,8 @@ enum class Hint {
     GET_HORIZONTAL,
     /** 푸시업: 엉덩이가 처지거나 솟음. */
     KEEP_BODY_STRAIGHT,
+    /** 폰이 움직이는 중이라 카운트를 멈춤 (PRD AC-06). */
+    PHONE_MOVING,
 }
 
 data class RepState(
@@ -71,6 +80,9 @@ abstract class RepCounter(protected val config: CounterConfig) {
     protected open fun onTop(frame: PoseFrame) {}
 
     protected open fun reset() {}
+
+    /** 이 프레임에서 판정에 필요한 관절이 모두 보이는지. 상태는 바꾸지 않는다. */
+    fun sees(frame: PoseFrame): Boolean = measure(frame) { it } != null
 
     var reps = 0
         private set
@@ -144,6 +156,7 @@ abstract class RepCounter(protected val config: CounterConfig) {
         ): RepCounter = when (exercise) {
             Exercise.SQUAT -> SquatCounter(difficulty, config)
             Exercise.PUSHUP -> PushupCounter(difficulty, config)
+            Exercise.ARM_RAISE -> ArmRaiseCounter(difficulty, config)
         }
     }
 }

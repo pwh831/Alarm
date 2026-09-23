@@ -7,6 +7,9 @@ import com.fitwake.alarm.DayMask
 import com.fitwake.pose.Difficulty
 import com.fitwake.pose.Exercise
 
+/** 랜덤 미션(Alarm.exercise == null)을 DB에 저장할 때 쓰는 값. */
+private const val RANDOM = "RANDOM"
+
 @Entity(tableName = "alarms")
 data class AlarmEntity(
     @PrimaryKey(autoGenerate = true) val id: Long,
@@ -30,7 +33,7 @@ fun AlarmEntity.toModel() = Alarm(
     repeatDays = DayMask.fromMask(repeatMask),
     label = label,
     enabled = enabled,
-    exercise = Exercise.entries.firstOrNull { it.name == exercise } ?: Exercise.SQUAT,
+    exercise = if (exercise == RANDOM) null else Exercise.entries.firstOrNull { it.name == exercise } ?: Exercise.SQUAT,
     difficulty = Difficulty.entries.firstOrNull { it.name == difficulty } ?: Difficulty.NORMAL,
     targetReps = targetReps,
     soundUri = soundUri,
@@ -45,7 +48,7 @@ fun Alarm.toEntity() = AlarmEntity(
     repeatMask = DayMask.toMask(repeatDays),
     label = label,
     enabled = enabled,
-    exercise = exercise.name,
+    exercise = exercise?.name ?: RANDOM,
     difficulty = difficulty.name,
     targetReps = targetReps,
     soundUri = soundUri,

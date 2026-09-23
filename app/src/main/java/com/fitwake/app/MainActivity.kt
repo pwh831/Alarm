@@ -13,10 +13,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.fitwake.app.alarm.AlarmService
 import com.fitwake.app.alarm.RingState
 import com.fitwake.app.edit.EditAlarmScreen
 import com.fitwake.app.home.HomeScreen
+import com.fitwake.app.onboarding.OnboardingScreen
 import com.fitwake.app.ringing.RingingActivity
 import com.fitwake.app.ui.FitWakeTheme
 
@@ -42,6 +44,7 @@ class MainActivity : ComponentActivity() {
 }
 
 private sealed interface Screen {
+    data object Onboarding : Screen
     data object Home : Screen
     /** id가 null이면 새 알람. */
     data class Edit(val alarmId: Long?) : Screen
@@ -49,8 +52,12 @@ private sealed interface Screen {
 
 @Composable
 private fun FitWakeApp() {
-    var screen by remember { mutableStateOf<Screen>(Screen.Home) }
+    val context = LocalContext.current
+    var screen by remember {
+        mutableStateOf<Screen>(if (AppPrefs.isOnboardingDone(context)) Screen.Home else Screen.Onboarding)
+    }
     when (val s = screen) {
+        Screen.Onboarding -> OnboardingScreen(onDone = { screen = Screen.Home })
         Screen.Home -> HomeScreen(
             onAdd = { screen = Screen.Edit(null) },
             onEdit = { screen = Screen.Edit(it.id) },

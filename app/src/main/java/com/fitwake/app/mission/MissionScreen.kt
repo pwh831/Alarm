@@ -6,8 +6,13 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.media.ToneGenerator
 import android.os.SystemClock
+import android.speech.tts.TextToSpeech
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -58,6 +63,8 @@ import com.fitwake.app.ui.Accent
 import com.fitwake.pose.Exercise
 import com.fitwake.pose.Hint
 import com.fitwake.pose.Landmark
+import com.fitwake.pose.MissionSession
+import com.fitwake.pose.MotionGuard
 import com.fitwake.pose.Phase
 import com.fitwake.pose.Point
 import com.fitwake.pose.RepCounter
@@ -117,13 +124,19 @@ private fun MissionCamera(
     val currentOnComplete by rememberUpdatedState(onComplete)
     val currentOnRep by rememberUpdatedState(onRep)
 
-    val counter = remember(config) { RepCounter.create(config.exercise, config.difficulty) }
-    var repState by remember { mutableStateOf(RepState(0, Phase.WAITING, Hint.NONE, null)) }
+    val session = remember(config) { MissionSession(RepCounter.create(config.exercise, config.difficulty)) }
+    var sessionState by remember {
+        mutableStateOf(MissionSession.State(null, false, RepState(0, Phase.WAITING, Hint.NONE, null)))
+    }
+    val repState = sessionState.rep
     var points by remember { mutableStateOf<Map<Landmark, Point>>(emptyMap()) }
     var useFrontCamera by remember { mutableStateOf(true) }
+    var torchOn by remember { mutableStateOf(false) }
     val startMs = remember { SystemClock.elapsedRealtime() }
 
     val tone = remember { ToneGenerator(AudioManager.STREAM_MUSIC, 80) }
+    val speech = rememberRepSpeech()
+    val motionGuard = rememberMotionGuard()
     val detector = remember {
         PoseDetection.getClient(
             PoseDetectorOptions.Builder()
@@ -147,10 +160,12 @@ private fun MissionCamera(
                 if (pose != null) {
                     val frame = pose.toPoseFrame(SystemClock.elapsedRealtime())
                     points = frame.points
-                    val before = repState.reps
-                    repState = counter.update(frame)
-                    if (repState.reps > before) {
-                        tone.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
+                    val before = sessionState.rep.reps
+                    sessionState = session.update(frame, motionGuard.isMoving(SystemClock.elapsedRealtime()))
+                    val reps = sessionState.rep.reps
+                    if (reps > before) {
+                        // 음성 안내가 되면 숫자를 읽어주고, 아니면 효과음 (PRD MS-04, 접근성)
+                        if (!speech.say(reps.toString())) tone.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         currentOnRep()
                     }
@@ -171,6 +186,11 @@ private fun MissionCamera(
             if (useFrontCamera) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
     }
 
+    // 후면 카메라일 때 어두운 방을 비출 플래시 (PRD 5.5). 전면일 때는 화면 밝기가 조명 역할을 한다.
+    LaunchedEffect(torchOn, useFrontCamera) {
+        controller.enableTorch(torchOn && !useFrontCamera)
+    }
+
     LaunchedEffect(repState.reps) {
         if (repState.reps >= config.targetReps) {
             currentOnComplete(((SystemClock.elapsedRealtime() - startMs) / 1000).toInt())
@@ -189,6 +209,16 @@ private fun MissionCamera(
         )
         SkeletonOverlay(points, color = Accent, modifier = Modifier.fillMaxSize())
 
+        sessionState.countdownSec?.let { sec ->
+            Text(
+                text = sec.toString(),
+                fontSize = 160.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+
         Column(
             Modifier
                 .fillMaxSize()
@@ -206,7 +236,7 @@ private fun MissionCamera(
                     .padding(horizontal = 24.dp, vertical = 4.dp),
             )
             Text(
-                text = hintText(config.exercise, repState),
+                text = hintText(config.exercise, sessionState),
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 textAlign = TextAlign.Center,
@@ -222,6 +252,14 @@ private fun MissionCamera(
                 OutlinedButton(onClick = { useFrontCamera = !useFrontCamera }) {
                     Text(stringResource(R.string.switch_camera), color = Color.White)
                 }
+                if (!useFrontCamera) {
+                    OutlinedButton(onClick = { torchOn = !torchOn }) {
+                        Text(
+                            stringResource(if (torchOn) R.string.torch_off else R.string.torch_on),
+                            color = Color.White,
+                        )
+                    }
+                }
                 OutlinedButton(onClick = onQuit) {
                     Text(stringResource(R.string.quit), color = Color.White)
                 }
@@ -231,20 +269,74 @@ private fun MissionCamera(
 }
 
 @Composable
-private fun hintText(exercise: Exercise, state: RepState): String = stringResource(
-    when (state.hint) {
+private fun hintText(exercise: Exercise, state: MissionSession.State): String = stringResource(
+    when (state.rep.hint) {
         Hint.BODY_NOT_VISIBLE -> R.string.hint_body_not_visible
         Hint.TOO_FAST -> R.string.hint_too_fast
         Hint.LOWER_HIPS -> R.string.hint_lower_hips
         Hint.GET_HORIZONTAL -> R.string.hint_get_horizontal
         Hint.KEEP_BODY_STRAIGHT -> R.string.hint_keep_body_straight
+        Hint.PHONE_MOVING -> R.string.hint_phone_moving
         Hint.NONE -> when {
-            state.phase != Phase.WAITING -> R.string.hint_go
-            exercise == Exercise.SQUAT -> R.string.hint_get_ready_squat
-            else -> R.string.hint_get_ready_pushup
+            state.countdownSec != null -> R.string.hint_countdown
+            state.started && state.rep.phase != Phase.WAITING -> R.string.hint_go
+            else -> when (exercise) {
+                Exercise.SQUAT -> R.string.hint_get_ready_squat
+                Exercise.PUSHUP -> R.string.hint_get_ready_pushup
+                Exercise.ARM_RAISE -> R.string.hint_get_ready_arm_raise
+            }
         }
     },
 )
+
+/** 성공 횟수를 소리 내어 읽어준다. 음성 엔진이 준비되지 않았으면 say()가 false. */
+private class RepSpeech {
+    var engine: TextToSpeech? = null
+
+    fun say(text: String): Boolean {
+        val tts = engine ?: return false
+        return tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "rep") == TextToSpeech.SUCCESS
+    }
+}
+
+@Composable
+private fun rememberRepSpeech(): RepSpeech {
+    val context = LocalContext.current
+    val speech = remember { RepSpeech() }
+    DisposableEffect(Unit) {
+        lateinit var tts: TextToSpeech
+        tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) speech.engine = tts
+        }
+        onDispose {
+            speech.engine = null
+            tts.shutdown()
+        }
+    }
+    return speech
+}
+
+/** 가속도계를 [MotionGuard]에 연결한다. */
+@Composable
+private fun rememberMotionGuard(): MotionGuard {
+    val context = LocalContext.current
+    val guard = remember { MotionGuard() }
+    DisposableEffect(Unit) {
+        val sensorManager = context.getSystemService(SensorManager::class.java)
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                guard.onAccelerometer(SystemClock.elapsedRealtime(), event.values[0], event.values[1], event.values[2])
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+        }
+        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let {
+            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME)
+        }
+        onDispose { sensorManager.unregisterListener(listener) }
+    }
+    return guard
+}
 
 /** 미션 중 화면이 꺼지지 않게 하고, 어두운 방에서 조명 역할을 하도록 밝기를 최대로 올린다 (PRD 5.5). */
 @Composable

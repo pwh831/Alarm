@@ -77,7 +77,8 @@ private fun EditAlarmForm(initial: Alarm, onDone: () -> Unit) {
     val time = rememberTimePickerState(initial.hour, initial.minute, android.text.format.DateFormat.is24HourFormat(context))
     var repeatDays by remember { mutableStateOf(initial.repeatDays) }
     var label by remember { mutableStateOf(initial.label) }
-    var mission by remember { mutableStateOf(initial.missionConfig()) }
+    // 미션 관련 필드(exercise, difficulty, targetReps)만 이 초안에서 쓴다.
+    var mission by remember { mutableStateOf(initial) }
     var soundUri by remember { mutableStateOf(initial.soundUri) }
     var vibrate by remember { mutableStateOf(initial.vibrate) }
     var volumeRamp by remember { mutableStateOf(initial.volumeRamp) }
@@ -99,9 +100,11 @@ private fun EditAlarmForm(initial: Alarm, onDone: () -> Unit) {
 
     // 저장 전 "미리 해보기" (PRD 3.1-6). 폼 상태는 이 컴포저블에 남아 있어 돌아와도 유지된다.
     if (previewing) {
+        // 랜덤 미션도 미리 해보기 한 번 동안은 같은 운동을 유지한다.
+        val previewConfig = remember { mission.missionConfig() }
         BackHandler { previewing = false }
         MissionScreen(
-            config = mission,
+            config = previewConfig,
             onComplete = { sec ->
                 previewing = false
                 Toast.makeText(context, context.getString(R.string.preview_success, sec), Toast.LENGTH_SHORT).show()

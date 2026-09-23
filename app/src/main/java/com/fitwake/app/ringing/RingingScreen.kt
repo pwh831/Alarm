@@ -39,6 +39,7 @@ import com.fitwake.app.mission.MissionScreen
 import com.fitwake.app.mission.missionConfig
 import com.fitwake.app.ui.difficultyAndReps
 import com.fitwake.app.ui.formatTime
+import com.fitwake.pose.Exercise
 import kotlinx.coroutines.delay
 import java.time.LocalTime
 
@@ -59,17 +60,18 @@ fun RingingScreen(onFinished: () -> Unit) {
         if (state == RingState.Idle && step != Step.DONE) onFinished()
     }
 
-    val alarm = (state as? RingState.Ringing)?.alarm
+    val ringing = state as? RingState.Ringing
+    val alarm = ringing?.alarm
     when {
         step == Step.DONE -> DoneContent(elapsedSec, onFinished)
-        alarm == null -> Unit // 서비스가 알람 정보를 불러오는 중
+        ringing == null || alarm == null -> Unit // 서비스가 알람 정보를 불러오는 중
         step == Step.MISSION -> {
             DisposableEffect(Unit) {
                 AlarmService.setMissionActive(context, true)
                 onDispose { AlarmService.setMissionActive(context, false) }
             }
             MissionScreen(
-                config = alarm.missionConfig(),
+                config = alarm.missionConfig(ringing.exercise),
                 onComplete = { sec ->
                     elapsedSec = sec
                     step = Step.DONE
@@ -81,6 +83,7 @@ fun RingingScreen(onFinished: () -> Unit) {
         }
         else -> RingingContent(
             alarm = alarm,
+            exercise = ringing.exercise,
             onStartMission = { step = Step.MISSION },
             onEmergencyDismiss = {
                 AlarmService.dismiss(context)
@@ -91,7 +94,12 @@ fun RingingScreen(onFinished: () -> Unit) {
 }
 
 @Composable
-private fun RingingContent(alarm: Alarm, onStartMission: () -> Unit, onEmergencyDismiss: () -> Unit) {
+private fun RingingContent(
+    alarm: Alarm,
+    exercise: Exercise,
+    onStartMission: () -> Unit,
+    onEmergencyDismiss: () -> Unit,
+) {
     var now by remember { mutableStateOf(LocalTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -120,7 +128,7 @@ private fun RingingContent(alarm: Alarm, onStartMission: () -> Unit, onEmergency
             textAlign = TextAlign.Center,
         )
         Text(
-            difficultyAndReps(alarm.exercise, alarm.difficulty, alarm.targetReps),
+            difficultyAndReps(exercise, alarm.difficulty, alarm.targetReps),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
         )
