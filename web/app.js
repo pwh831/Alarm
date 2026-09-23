@@ -1,12 +1,12 @@
 import {
   EMERGENCY_PHRASE, Hint, MissionSession, MotionGuard, Phase, RANDOM_EXERCISES,
-  createCounter, dayKey, matchesEmergency, successDays, summary,
+  createCounter, dayKey, matchesEmergency, narrowVariant, successDays, summary,
 } from './core.js';
 
 // ── 설정·기록 저장 (이 브라우저의 localStorage) ────────────────
 const SETTINGS_KEY = 'fitwake.settings';
 const RECORDS_KEY = 'fitwake.records';
-const defaults = { exercise: 'SQUAT', difficulty: 'NORMAL', reps: 15, shortcutName: 'FitWake 완료' };
+const defaults = { exercise: 'SQUAT', difficulty: 'NORMAL', reps: 15, narrow: false, shortcutName: 'FitWake 완료' };
 
 function load(key, fallback) {
   try {
@@ -19,10 +19,15 @@ const save = (key, value) => {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* 사생활 보호 모드 등 */ }
 };
 const settings = { ...defaults, ...load(SETTINGS_KEY, {}) };
+// 예전 버전의 "스쿼트 (좁은 공간)" 선택지는 스쿼트 + 좁은 공간 설정으로 옮긴다.
+if (settings.exercise === 'SQUAT_UPPER') {
+  settings.exercise = 'SQUAT';
+  settings.narrow = true;
+}
 const records = () => load(RECORDS_KEY, []);
 
-const LABEL = { SQUAT: '스쿼트', SQUAT_UPPER: '스쿼트', PUSHUP: '푸시업', ARM_RAISE: '팔 올리기', RANDOM: '랜덤' };
-const DEFAULT_REPS = { SQUAT: 15, SQUAT_UPPER: 15, PUSHUP: 10, ARM_RAISE: 20, RANDOM: 15 };
+const LABEL = { SQUAT: '스쿼트', SQUAT_UPPER: '스쿼트', PUSHUP: '푸시업', PUSHUP_FRONT: '푸시업', ARM_RAISE: '팔 올리기', RANDOM: '랜덤' };
+const DEFAULT_REPS = { SQUAT: 15, PUSHUP: 10, ARM_RAISE: 20, RANDOM: 15 };
 const $ = (id) => document.getElementById(id);
 
 // ── 화면 전환 ─────────────────────────────────────────────
@@ -40,15 +45,11 @@ function renderSettings() {
   $('exercise').value = settings.exercise;
   $('difficulty').value = settings.difficulty;
   $('reps').value = settings.reps;
+  $('narrow').checked = settings.narrow;
   $('shortcut-name').value = settings.shortcutName;
   $('shortcut-name-label').textContent = settings.shortcutName;
   $('mission-url').textContent = missionUrl;
-  $('exercise-note').textContent = {
-    PUSHUP: '폰을 몸 옆쪽 바닥에 세워 측면에서 찍히게 해 주세요.',
-    SQUAT_UPPER: '머리부터 엉덩이까지만 보이면 돼요. 1~1.5m 떨어져 서고, 앉았을 때 엉덩이가 화면 아래로 나가지 않게 폰을 허리 높이쯤에 두세요.',
-    RANDOM: '매번 스쿼트와 푸시업 중 하나가 무작위로 정해져요.',
-    ARM_RAISE: '부상이 있거나 공간이 좁을 때 쓰는 가벼운 미션이에요. 양팔을 머리 위로 올렸다 내리면 1회예요.',
-  }[settings.exercise] ?? '폰을 세워 두고 전신이 보이게 2~3m 떨어져 주세요.';
+  $('exercise-note').textContent = placementNote(settings.exercise, settings.narrow);
 }
 $('exercise').addEventListener('change', (e) => {
   settings.exercise = e.target.value;
@@ -57,6 +58,25 @@ $('exercise').addEventListener('change', (e) => {
   renderSettings();
 });
 $('difficulty').addEventListener('change', (e) => { settings.difficulty = e.target.value; save(SETTINGS_KEY, settings); });
+$('narrow').addEventListener('change', (e) => {
+  settings.narrow = e.target.checked;
+  save(SETTINGS_KEY, settings);
+  renderSettings();
+});
+
+/** 폰을 어디에 두고 어떻게 서야 하는지. */
+function placementNote(exercise, narrow) {
+  const squat = narrow
+    ? '스쿼트: 머리부터 엉덩이까지만 보이면 돼요. 폰을 허리 높이에 두고 1~1.5m 떨어져 서세요.'
+    : '스쿼트: 폰을 세워 두고 전신이 보이게 2~3m 떨어져 서세요.';
+  const pushup = narrow
+    ? '푸시업: 폰을 머리 앞 바닥(손에서 50cm쯤)에 세워 정면에서 얼굴·어깨·양손이 보이게 하세요.'
+    : '푸시업: 폰을 몸 옆쪽 바닥에 세워 측면에서 전신이 찍히게 하세요.';
+  if (exercise === 'SQUAT') return squat;
+  if (exercise === 'PUSHUP') return pushup;
+  if (exercise === 'RANDOM') return `매번 스쿼트와 푸시업 중 하나가 정해져요. ${squat} ${pushup}`;
+  return '부상이 있거나 공간이 좁을 때 쓰는 가벼운 미션이에요. 상체가 보이게 서서 양팔을 머리 위로 올렸다 내리면 1회예요.';
+}
 $('reps').addEventListener('change', (e) => {
   settings.reps = Math.min(50, Math.max(5, Math.round(Number(e.target.value) || 15)));
   save(SETTINGS_KEY, settings);
@@ -95,9 +115,10 @@ async function getLandmarker() {
 }
 
 function openMission(alarm) {
-  const exercise = settings.exercise === 'RANDOM'
+  const picked = settings.exercise === 'RANDOM'
     ? RANDOM_EXERCISES[Math.floor(Math.random() * RANDOM_EXERCISES.length)]
     : settings.exercise;
+  const exercise = settings.narrow ? narrowVariant(picked) : picked;
   mission = {
     alarm,
     exercise,
@@ -242,12 +263,14 @@ function hintText(state) {
     case Hint.KEEP_BODY_STRAIGHT: return '어깨부터 발끝까지 일직선을 유지하세요';
     case Hint.PHONE_MOVING: return '폰이 움직이고 있어요. 바닥이나 선반에 세워 두세요';
     case Hint.STAND_UPRIGHT: return '허리를 숙이지 말고 상체를 세운 채로 앉았다 일어나세요';
+    case Hint.KEEP_HANDS_PLANTED: return '양손을 바닥에 짚고 움직이지 마세요';
     default:
       if (state.countdownSec !== null) return '좋아요, 그대로! 곧 시작해요';
       if (state.started && state.rep.phase !== Phase.WAITING) return '좋아요! 계속하세요';
       return {
         SQUAT: '전신이 보이도록 2~3m 떨어져서 똑바로 서세요',
         SQUAT_UPPER: '머리부터 엉덩이까지 보이게 서서 잠깐 멈춰 주세요',
+        PUSHUP_FRONT: '폰 앞에서 팔을 편 엎드린 자세로 잠깐 멈춰 주세요',
         PUSHUP: '폰을 옆에 두고 팔을 편 플랭크 자세를 잡으세요',
         ARM_RAISE: '상체가 다 보이게 서서 양팔을 내리세요',
       }[mission.exercise];

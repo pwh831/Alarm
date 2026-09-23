@@ -1,15 +1,30 @@
 // 플랫폼 독립 로직: 반복 카운터, 미션 진행, 폰 움직임 감지, 기록 통계.
 // Android(core/pose, core/alarm)·iOS(FitWakeCore)와 같은 규칙을 JavaScript로 옮긴 것이다.
 
-export const Exercise = { SQUAT: 'SQUAT', SQUAT_UPPER: 'SQUAT_UPPER', PUSHUP: 'PUSHUP', ARM_RAISE: 'ARM_RAISE' };
+export const Exercise = {
+  SQUAT: 'SQUAT',
+  PUSHUP: 'PUSHUP',
+  ARM_RAISE: 'ARM_RAISE',
+  // 좁은 공간용: 전신이 안 보여도 된다
+  SQUAT_UPPER: 'SQUAT_UPPER',
+  PUSHUP_FRONT: 'PUSHUP_FRONT',
+};
+
+/** "좁은 공간" 설정일 때 쓸 종목. */
+export function narrowVariant(exercise) {
+  if (exercise === Exercise.SQUAT) return Exercise.SQUAT_UPPER;
+  if (exercise === Exercise.PUSHUP) return Exercise.PUSHUP_FRONT;
+  return exercise;
+}
 export const RANDOM_EXERCISES = [Exercise.SQUAT, Exercise.PUSHUP];
 
 /** PRD 5.3 난이도별 기준. */
 export const Difficulty = {
   // upperSquatDrop: 상체만 보는 스쿼트에서 엉덩이가 몸통 길이의 몇 배만큼 내려가야 하는지
-  EASY: { squatBottomKnee: 120, pushupBottomElbow: 110, allowKneePushup: true, armRaiseMinShoulder: 90, upperSquatDrop: 0.3 },
-  NORMAL: { squatBottomKnee: 100, pushupBottomElbow: 90, allowKneePushup: false, armRaiseMinShoulder: 140, upperSquatDrop: 0.5 },
-  HARD: { squatBottomKnee: 85, pushupBottomElbow: 75, allowKneePushup: false, armRaiseMinShoulder: 160, upperSquatDrop: 0.7 },
+  // frontPushupDepth: 정면 푸시업에서 팔을 편 상태 대비 어깨-손 높이가 몇 %까지 줄어야 하는지
+  EASY: { squatBottomKnee: 120, pushupBottomElbow: 110, allowKneePushup: true, armRaiseMinShoulder: 90, upperSquatDrop: 0.3, frontPushupDepth: 65 },
+  NORMAL: { squatBottomKnee: 100, pushupBottomElbow: 90, allowKneePushup: false, armRaiseMinShoulder: 140, upperSquatDrop: 0.5, frontPushupDepth: 50 },
+  HARD: { squatBottomKnee: 85, pushupBottomElbow: 75, allowKneePushup: false, armRaiseMinShoulder: 160, upperSquatDrop: 0.7, frontPushupDepth: 35 },
 };
 
 export const Hint = {
@@ -22,6 +37,8 @@ export const Hint = {
   PHONE_MOVING: 'PHONE_MOVING',
   /** 상체 스쿼트: 허리를 숙이지 말고 상체를 세운 채 앉아야 함. */
   STAND_UPRIGHT: 'STAND_UPRIGHT',
+  /** 정면 푸시업: 손을 바닥에 고정해야 함. */
+  KEEP_HANDS_PLANTED: 'KEEP_HANDS_PLANTED',
 };
 
 export const Phase = { WAITING: 'WAITING', TOP: 'TOP', BOTTOM: 'BOTTOM' };
@@ -270,9 +287,69 @@ export class UpperBodySquatCounter extends RepCounter {
   }
 }
 
+/**
+ * 좁은 공간용 푸시업: 머리 앞 바닥에 둔 폰으로 정면에서 찍는다. 어깨 두 개와 손목 하나 이상만 보이면 된다.
+ * 판정값은 `(손목 y - 어깨 y) / 어깨 너비`를 최근 몇 초의 최댓값(팔을 편 자세)으로 나눈 백분율이다.
+ * 어깨 너비로 나누므로 폰과의 거리에 상관없다. 손이 움직이면(서서 팔만 흔들기) 세지 않는다.
+ */
+export class FrontPushupCounter extends RepCounter {
+  constructor(difficulty, config) {
+    super(config);
+    this.top = 85;
+    this.bottom = difficulty.frontPushupDepth;
+    this.windowMs = 6000;
+    this.handWindowMs = 2000;
+    this.samples = [];
+    this.recording = false;
+  }
+
+  update(timestampMs, points) {
+    this.now = timestampMs;
+    this.recording = true;
+    try {
+      return super.update(timestampMs, points);
+    } finally {
+      this.recording = false;
+    }
+  }
+
+  measure(points, smooth) {
+    const shoulders = visible(points, this.config.minConfidence, 'leftShoulder', 'rightShoulder');
+    if (!shoulders) return null;
+    const wrists = ['leftWrist', 'rightWrist'].map((n) => visible(points, this.config.minConfidence, n)?.[0]).filter(Boolean);
+    if (wrists.length === 0) return null;
+    const width = dist(shoulders[0], shoulders[1]);
+    if (width <= 0) return null;
+    const shoulderY = avg(shoulders.map((p) => p.y));
+    const wristX = avg(wrists.map((p) => p.x));
+    const wristY = avg(wrists.map((p) => p.y));
+    const reach = (wristY - shoulderY) / width;
+
+    if (this.recording) {
+      this.samples.push({ t: this.now, reach, wristX, wristY, width });
+      while (this.samples.length && this.now - this.samples[0].t > this.windowMs) this.samples.shift();
+    }
+    const window = this.samples.length ? this.samples : [{ t: 0, reach, wristX, wristY, width }];
+    const extended = Math.max(...window.map((x) => x.reach));
+    if (extended <= 0) return { angle: 0, formHint: Hint.KEEP_HANDS_PLANTED };
+
+    // 최근 2초 동안 손이 어깨 너비의 40% 넘게 움직였으면 손을 짚고 있지 않은 것
+    const recent = window.filter((x) => this.now === undefined || this.now - x.t <= this.handWindowMs);
+    const span = (f) => Math.max(...recent.map(f)) - Math.min(...recent.map(f));
+    const handsMoved = Math.max(span((x) => x.wristX), span((x) => x.wristY)) > 0.4 * Math.max(...recent.map((x) => x.width));
+    const value = (100 * Math.max(0, reach)) / extended;
+    return { angle: smooth(value), formHint: handsMoved ? Hint.KEEP_HANDS_PLANTED : Hint.NONE };
+  }
+
+  reset() {
+    this.samples = [];
+  }
+}
+
 export function createCounter(exercise, difficultyName, config) {
   const d = Difficulty[difficultyName] ?? Difficulty.NORMAL;
   if (exercise === Exercise.SQUAT_UPPER) return new UpperBodySquatCounter(d, config);
+  if (exercise === Exercise.PUSHUP_FRONT) return new FrontPushupCounter(d, config);
   if (exercise === Exercise.PUSHUP) return new PushupCounter(d, config);
   if (exercise === Exercise.ARM_RAISE) return new ArmRaiseCounter(d, config);
   return new SquatCounter(d, config);

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  ArmRaiseCounter, Difficulty, Hint, MissionSession, MotionGuard, PushupCounter, SquatCounter, UpperBodySquatCounter,
+  ArmRaiseCounter, Difficulty, Hint, MissionSession, MotionGuard, PushupCounter, SquatCounter, UpperBodySquatCounter, FrontPushupCounter,
   angleDeg, matchesEmergency, streak, summary,
 } from './core.js';
 
@@ -221,4 +221,44 @@ test('upper-body squat needs only shoulders and hips', () => {
   const c = new UpperBodySquatCounter(Difficulty.NORMAL);
   assert.equal(c.sees(upperSquat(100)), true);
   assert.equal(c.sees({ leftShoulder: P(0.5, 0.3) }), false);
+});
+
+// 정면 푸시업: 손목 고정 (0.4, 0.8)·(0.6, 0.8), 어깨 너비 0.2, 팔을 편 높이 = 어깨 너비 × 1.2.
+// 값 100 = 팔을 편 자세, 값이 작을수록 어깨가 손 쪽으로 내려옴.
+const frontPushup = (value) => {
+  const shoulderY = 0.8 - 0.2 * 1.2 * (value / 100);
+  return { leftShoulder: P(0.4, shoulderY), rightShoulder: P(0.6, shoulderY), leftWrist: P(0.4, 0.8), rightWrist: P(0.6, 0.8) };
+};
+// 서서 팔만 위아래로: 어깨는 그대로, 손이 올라왔다 내려감.
+const standingArmPump = (value) => {
+  const wristY = 0.3 + 0.2 * 1.2 * (value / 100);
+  return { leftShoulder: P(0.4, 0.3), rightShoulder: P(0.6, 0.3), leftWrist: P(0.4, wristY), rightWrist: P(0.6, wristY) };
+};
+
+test('front pushup counts by depth and difficulty', () => {
+  for (const [diff, depth, expected] of [
+    [Difficulty.NORMAL, 30, 3],
+    [Difficulty.NORMAL, 60, 0],
+    [Difficulty.EASY, 60, 3],
+    [Difficulty.HARD, 45, 0],
+  ]) {
+    const d = driver(new FrontPushupCounter(diff), frontPushup);
+    d.hold(100, 500);
+    for (let i = 0; i < 3; i++) d.rep(100, depth);
+    assert.equal(d.last.reps, expected, `${JSON.stringify(diff)} depth ${depth}`);
+  }
+});
+
+test('front pushup ignores moving hands while standing', () => {
+  const d = driver(new FrontPushupCounter(Difficulty.EASY), standingArmPump);
+  d.hold(100, 500);
+  for (let i = 0; i < 3; i++) d.rep(100, 20);
+  assert.equal(d.last.reps, 0);
+  assert.equal(d.last.hint, Hint.KEEP_HANDS_PLANTED);
+});
+
+test('front pushup needs both shoulders and a wrist', () => {
+  const c = new FrontPushupCounter(Difficulty.NORMAL);
+  assert.equal(c.sees(frontPushup(100)), true);
+  assert.equal(c.sees({ leftShoulder: P(0.4, 0.5), rightShoulder: P(0.6, 0.5) }), false);
 });
