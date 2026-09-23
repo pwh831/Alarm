@@ -21,8 +21,8 @@ const save = (key, value) => {
 const settings = { ...defaults, ...load(SETTINGS_KEY, {}) };
 const records = () => load(RECORDS_KEY, []);
 
-const LABEL = { SQUAT: '스쿼트', PUSHUP: '푸시업', ARM_RAISE: '팔 올리기', RANDOM: '랜덤' };
-const DEFAULT_REPS = { SQUAT: 15, PUSHUP: 10, ARM_RAISE: 20, RANDOM: 15 };
+const LABEL = { SQUAT: '스쿼트', SQUAT_UPPER: '스쿼트', PUSHUP: '푸시업', ARM_RAISE: '팔 올리기', RANDOM: '랜덤' };
+const DEFAULT_REPS = { SQUAT: 15, SQUAT_UPPER: 15, PUSHUP: 10, ARM_RAISE: 20, RANDOM: 15 };
 const $ = (id) => document.getElementById(id);
 
 // ── 화면 전환 ─────────────────────────────────────────────
@@ -45,6 +45,7 @@ function renderSettings() {
   $('mission-url').textContent = missionUrl;
   $('exercise-note').textContent = {
     PUSHUP: '폰을 몸 옆쪽 바닥에 세워 측면에서 찍히게 해 주세요.',
+    SQUAT_UPPER: '머리부터 엉덩이까지만 보이면 돼요. 1~1.5m 떨어져 서고, 앉았을 때 엉덩이가 화면 아래로 나가지 않게 폰을 허리 높이쯤에 두세요.',
     RANDOM: '매번 스쿼트와 푸시업 중 하나가 무작위로 정해져요.',
     ARM_RAISE: '부상이 있거나 공간이 좁을 때 쓰는 가벼운 미션이에요. 양팔을 머리 위로 올렸다 내리면 1회예요.',
   }[settings.exercise] ?? '폰을 세워 두고 전신이 보이게 2~3m 떨어져 주세요.';
@@ -78,7 +79,7 @@ const LANDMARKS = {
 const BONES = [[11, 12], [23, 24], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 25], [25, 27], [24, 26], [26, 28]];
 
 let landmarker = null;
-let mission = null; // { alarm, exercise, target, session, motion, stream, facing, openedAt, startedAt, running, wakeLock }
+let mission = null; // { alarm, exercise, target, session, motion, stream, deviceId, openedAt, startedAt, running, wakeLock }
 
 async function getLandmarker() {
   if (landmarker) return landmarker;
@@ -103,7 +104,6 @@ function openMission(alarm) {
     target: settings.reps,
     session: new MissionSession(createCounter(exercise, settings.difficulty)),
     motion: new MotionGuard(),
-    facing: 'user',
     openedAt: Date.now(),
     running: false,
     lastVideoTime: -1,
@@ -146,22 +146,46 @@ $('start').addEventListener('click', async () => {
   requestAnimationFrame(loop);
 });
 
+const CAMERA_KEY = 'fitwake.camera';
+
 async function startCamera() {
   mission.stream?.getTracks().forEach((t) => t.stop());
-  mission.stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: mission.facing, width: { ideal: 720 }, height: { ideal: 1280 } },
-    audio: false,
-  });
+  const size = { width: { ideal: 720 }, height: { ideal: 1280 } };
+  const saved = load(CAMERA_KEY, null);
+  try {
+    mission.stream = await navigator.mediaDevices.getUserMedia({
+      video: saved ? { deviceId: { exact: saved }, ...size } : { facingMode: 'user', ...size },
+      audio: false,
+    });
+  } catch {
+    // 저장해 둔 카메라가 없어졌으면 전면 카메라로
+    mission.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', ...size }, audio: false });
+  }
   const video = $('video');
   video.srcObject = mission.stream;
   await video.play();
-  document.querySelector('.stage').classList.toggle('mirror', mission.facing === 'user');
+  const track = mission.stream.getVideoTracks()[0];
+  const cam = track.getSettings();
+  mission.deviceId = cam.deviceId;
+  document.querySelector('.stage').classList.toggle('mirror', cam.facingMode === 'user' || /front|전면/i.test(track.label));
+  $('switch-camera').textContent = `카메라: ${cameraName(track.label)}`;
 }
 
+function cameraName(label) {
+  if (/ultra ?wide|초광각/i.test(label)) return '후면 초광각';
+  if (/front|전면/i.test(label)) return '전면';
+  if (/back|후면|rear/i.test(label)) return '후면';
+  return label || '기본';
+}
+
+// 기기의 카메라(전면, 후면, 후면 초광각 등)를 차례로 바꾼다. 고른 카메라는 다음 미션에도 쓴다.
 $('switch-camera').addEventListener('click', async () => {
-  if (!mission) return;
-  mission.facing = mission.facing === 'user' ? 'environment' : 'user';
-  try { await startCamera(); } catch { /* 카메라가 하나뿐인 기기 */ }
+  if (!mission?.stream) return;
+  const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+  if (cams.length < 2) return;
+  const i = cams.findIndex((d) => d.deviceId === mission.deviceId);
+  save(CAMERA_KEY, cams[(i + 1) % cams.length].deviceId);
+  try { await startCamera(); } catch { /* 해당 카메라를 열 수 없음 */ }
 });
 
 function onMotion(e) {
@@ -217,11 +241,13 @@ function hintText(state) {
     case Hint.GET_HORIZONTAL: return '몸을 바닥과 수평으로 만들어주세요';
     case Hint.KEEP_BODY_STRAIGHT: return '어깨부터 발끝까지 일직선을 유지하세요';
     case Hint.PHONE_MOVING: return '폰이 움직이고 있어요. 바닥이나 선반에 세워 두세요';
+    case Hint.STAND_UPRIGHT: return '허리를 숙이지 말고 상체를 세운 채로 앉았다 일어나세요';
     default:
       if (state.countdownSec !== null) return '좋아요, 그대로! 곧 시작해요';
       if (state.started && state.rep.phase !== Phase.WAITING) return '좋아요! 계속하세요';
       return {
         SQUAT: '전신이 보이도록 2~3m 떨어져서 똑바로 서세요',
+        SQUAT_UPPER: '머리부터 엉덩이까지 보이게 서서 잠깐 멈춰 주세요',
         PUSHUP: '폰을 옆에 두고 팔을 편 플랭크 자세를 잡으세요',
         ARM_RAISE: '상체가 다 보이게 서서 양팔을 내리세요',
       }[mission.exercise];

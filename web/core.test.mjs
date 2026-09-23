@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  ArmRaiseCounter, Difficulty, Hint, MissionSession, MotionGuard, PushupCounter, SquatCounter,
+  ArmRaiseCounter, Difficulty, Hint, MissionSession, MotionGuard, PushupCounter, SquatCounter, UpperBodySquatCounter,
   angleDeg, matchesEmergency, streak, summary,
 } from './core.js';
 
@@ -177,4 +177,48 @@ test('streak and summary', () => {
   assert.deepEqual(s.weekReps, { SQUAT: 15, PUSHUP: 10 });
   assert.deepEqual(s.monthReps, { SQUAT: 35, PUSHUP: 10 });
   assert.equal(s.monthEmergencyCount, 1);
+});
+
+// 상체만 보이는 스쿼트: 선 자세 어깨 (0.5, 0.3), 엉덩이 (0.5, 0.6) → 몸통 0.3.
+// 값은 판정값(100 = 선 자세, 100 - 하강비율×100)으로 넣는다.
+const upperSquat = (value) => {
+  const drop = ((100 - value) / 100) * 0.3;
+  return {
+    leftShoulder: P(0.48, 0.3 + drop), rightShoulder: P(0.52, 0.3 + drop),
+    leftHip: P(0.48, 0.6 + drop), rightHip: P(0.52, 0.6 + drop),
+  };
+};
+// 허리만 숙이기: 엉덩이는 그대로, 어깨만 앞으로 내려간다.
+const bowOnly = (value) => {
+  const bend = rad(((100 - value) / 100) * 150);
+  const hip = P(0.5, 0.6);
+  const sh = P(0.5 + 0.3 * Math.sin(bend), 0.6 - 0.3 * Math.cos(bend));
+  return { leftShoulder: sh, rightShoulder: sh, leftHip: hip, rightHip: hip };
+};
+
+test('upper-body squat counts hip drops by difficulty', () => {
+  for (const [diff, depth, expected] of [
+    [Difficulty.NORMAL, 30, 3], // 하강 0.7 ≥ 0.5
+    [Difficulty.NORMAL, 60, 0], // 하강 0.4 < 0.5
+    [Difficulty.EASY, 60, 3], // 하강 0.4 ≥ 0.3
+    [Difficulty.HARD, 40, 0], // 하강 0.6 < 0.7
+  ]) {
+    const d = driver(new UpperBodySquatCounter(diff), upperSquat);
+    d.hold(100, 500);
+    for (let i = 0; i < 3; i++) d.rep(100, depth);
+    assert.equal(d.last.reps, expected, `${JSON.stringify(diff)} depth ${depth}`);
+  }
+});
+
+test('upper-body squat ignores bowing forward', () => {
+  const d = driver(new UpperBodySquatCounter(Difficulty.EASY), bowOnly);
+  d.hold(100, 500);
+  for (let i = 0; i < 3; i++) d.rep(100, 20);
+  assert.equal(d.last.reps, 0);
+});
+
+test('upper-body squat needs only shoulders and hips', () => {
+  const c = new UpperBodySquatCounter(Difficulty.NORMAL);
+  assert.equal(c.sees(upperSquat(100)), true);
+  assert.equal(c.sees({ leftShoulder: P(0.5, 0.3) }), false);
 });
