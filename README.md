@@ -47,6 +47,8 @@ app/          Android 앱 (Jetpack Compose)
 
 ## 테스트
 
+PR과 `main` 푸시마다 GitHub Actions(`.github/workflows/ci.yml`)가 아래 순서로 검사하고, 디버그 APK를 아티팩트로 올린다: core 단위 테스트 → `assembleDebug` → `lintDebug`.
+
 ```bash
 ./gradlew :core:pose:test :core:alarm:test
 ```
