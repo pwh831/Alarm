@@ -22,6 +22,7 @@
       <label>운동
         <select id="exercise">
           <option value="SQUAT">스쿼트</option>
+          <option value="SQUAT_UPPER">스쿼트 (좁은 공간: 상체만 보여도 됨)</option>
           <option value="PUSHUP">푸시업</option>
           <option value="RANDOM">랜덤 (스쿼트·푸시업)</option>
           <option value="ARM_RAISE">팔 올리기 (가벼운 미션)</option>
@@ -53,7 +54,7 @@
         <div id="hint" class="hint">준비 중…</div>
       </div>
       <div class="controls">
-        <button id="switch-camera">카메라 전환</button>
+        <button id="switch-camera">카메라: 전면</button>
         <button id="emergency" class="danger hidden">긴급 해제</button>
         <button id="quit" class="hidden">그만하기</button>
       </div>
@@ -133,6 +134,7 @@
       <ol>
         <li>Safari에서 이 페이지 → 주소창 <b>aA</b> → 웹사이트 설정 → 카메라·동작 <b>허용</b>으로 바꾸면 매번 묻지 않아요.</li>
         <li>1~2분 뒤로 알람을 맞추고 꺼 보세요. 미션 페이지가 열리면 성공이에요.</li>
+        <li>공간이 좁으면 운동을 <b>스쿼트 (좁은 공간)</b>으로 바꾸거나, 미션 화면의 <b>카메라</b> 버튼으로 <b>후면 초광각</b> 카메라를 고르세요.</li>
       </ol>
       <label>단축어 이름 <input id="shortcut-name" type="text"></label>
     </div>

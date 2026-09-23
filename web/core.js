@@ -1,14 +1,15 @@
 // 플랫폼 독립 로직: 반복 카운터, 미션 진행, 폰 움직임 감지, 기록 통계.
 // Android(core/pose, core/alarm)·iOS(FitWakeCore)와 같은 규칙을 JavaScript로 옮긴 것이다.
 
-export const Exercise = { SQUAT: 'SQUAT', PUSHUP: 'PUSHUP', ARM_RAISE: 'ARM_RAISE' };
+export const Exercise = { SQUAT: 'SQUAT', SQUAT_UPPER: 'SQUAT_UPPER', PUSHUP: 'PUSHUP', ARM_RAISE: 'ARM_RAISE' };
 export const RANDOM_EXERCISES = [Exercise.SQUAT, Exercise.PUSHUP];
 
 /** PRD 5.3 난이도별 기준. */
 export const Difficulty = {
-  EASY: { squatBottomKnee: 120, pushupBottomElbow: 110, allowKneePushup: true, armRaiseMinShoulder: 90 },
-  NORMAL: { squatBottomKnee: 100, pushupBottomElbow: 90, allowKneePushup: false, armRaiseMinShoulder: 140 },
-  HARD: { squatBottomKnee: 85, pushupBottomElbow: 75, allowKneePushup: false, armRaiseMinShoulder: 160 },
+  // upperSquatDrop: 상체만 보는 스쿼트에서 엉덩이가 몸통 길이의 몇 배만큼 내려가야 하는지
+  EASY: { squatBottomKnee: 120, pushupBottomElbow: 110, allowKneePushup: true, armRaiseMinShoulder: 90, upperSquatDrop: 0.3 },
+  NORMAL: { squatBottomKnee: 100, pushupBottomElbow: 90, allowKneePushup: false, armRaiseMinShoulder: 140, upperSquatDrop: 0.5 },
+  HARD: { squatBottomKnee: 85, pushupBottomElbow: 75, allowKneePushup: false, armRaiseMinShoulder: 160, upperSquatDrop: 0.7 },
 };
 
 export const Hint = {
@@ -19,6 +20,8 @@ export const Hint = {
   GET_HORIZONTAL: 'GET_HORIZONTAL',
   KEEP_BODY_STRAIGHT: 'KEEP_BODY_STRAIGHT',
   PHONE_MOVING: 'PHONE_MOVING',
+  /** 상체 스쿼트: 허리를 숙이지 말고 상체를 세운 채 앉아야 함. */
+  STAND_UPRIGHT: 'STAND_UPRIGHT',
 };
 
 export const Phase = { WAITING: 'WAITING', TOP: 'TOP', BOTTOM: 'BOTTOM' };
@@ -215,8 +218,61 @@ export class ArmRaiseCounter extends RepCounter {
   }
 }
 
+/**
+ * 좁은 공간용 스쿼트: 어깨와 엉덩이만 보이면 된다.
+ * 최근 몇 초 동안 가장 높았던 엉덩이 위치(선 자세)를 기준으로, 엉덩이가 몸통 길이의 일정 배수 이상
+ * 내려갔다가 돌아오면 1회. 허리만 숙이면 엉덩이가 내려가지 않으므로 세지 않는다.
+ * 판정값은 `100 - 하강비율×100`이라 선 자세가 100 근처, 깊이 앉을수록 작아진다.
+ */
+export class UpperBodySquatCounter extends RepCounter {
+  constructor(difficulty, config) {
+    super(config);
+    this.top = 90;
+    this.bottom = 100 - difficulty.upperSquatDrop * 100;
+    this.windowMs = 6000;
+    this.samples = [];
+    this.recording = false;
+  }
+
+  update(timestampMs, points) {
+    this.now = timestampMs;
+    this.recording = true;
+    try {
+      return super.update(timestampMs, points);
+    } finally {
+      this.recording = false;
+    }
+  }
+
+  measure(points, smooth) {
+    const torsos = SIDES.map((s) => visible(points, this.config.minConfidence, s.shoulder, s.hip)).filter(Boolean);
+    if (torsos.length === 0) return null;
+    const shoulderY = avg(torsos.map(([s]) => s.y));
+    const hipY = avg(torsos.map(([, h]) => h.y));
+    const torso = avg(torsos.map(([s, h]) => dist(s, h)));
+    const lean = (Math.atan2(Math.abs(avg(torsos.map(([s, h]) => s.x - h.x))), hipY - shoulderY) * 180) / Math.PI;
+
+    // 판정 여부 확인(sees)만 할 때는 기준 자세 기록을 건드리지 않는다.
+    if (this.recording) {
+      this.samples.push({ t: this.now, hipY, torso });
+      while (this.samples.length && this.now - this.samples[0].t > this.windowMs) this.samples.shift();
+    }
+    const window = this.samples.length ? this.samples : [{ hipY, torso }];
+    const standingHipY = Math.min(...window.map((x) => x.hipY));
+    const standingTorso = Math.max(...window.map((x) => x.torso));
+    const drop = Math.max(0, (hipY - standingHipY) / standingTorso);
+    const formHint = lean > 50 ? Hint.STAND_UPRIGHT : Hint.NONE;
+    return { angle: smooth(100 - drop * 100), formHint };
+  }
+
+  reset() {
+    this.samples = [];
+  }
+}
+
 export function createCounter(exercise, difficultyName, config) {
   const d = Difficulty[difficultyName] ?? Difficulty.NORMAL;
+  if (exercise === Exercise.SQUAT_UPPER) return new UpperBodySquatCounter(d, config);
   if (exercise === Exercise.PUSHUP) return new PushupCounter(d, config);
   if (exercise === Exercise.ARM_RAISE) return new ArmRaiseCounter(d, config);
   return new SquatCounter(d, config);
