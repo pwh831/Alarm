@@ -8,6 +8,8 @@ export const Exercise = {
   // 좁은 공간용: 전신이 안 보여도 된다
   SQUAT_UPPER: 'SQUAT_UPPER',
   PUSHUP_FRONT: 'PUSHUP_FRONT',
+  // 폰을 화면이 위로 오게 얼굴 아래 바닥에 눕혀 둔다
+  PUSHUP_FLOOR: 'PUSHUP_FLOOR',
 };
 
 /** "좁은 공간" 설정일 때 쓸 종목. */
@@ -22,9 +24,10 @@ export const RANDOM_EXERCISES = [Exercise.SQUAT, Exercise.PUSHUP];
 export const Difficulty = {
   // upperSquatDrop: 상체만 보는 스쿼트에서 엉덩이가 몸통 길이의 몇 배만큼 내려가야 하는지
   // frontPushupDepth: 정면 푸시업에서 팔을 편 상태 대비 어깨-손 높이가 몇 %까지 줄어야 하는지
-  EASY: { squatBottomKnee: 120, pushupBottomElbow: 110, allowKneePushup: true, armRaiseMinShoulder: 90, upperSquatDrop: 0.3, frontPushupDepth: 65 },
-  NORMAL: { squatBottomKnee: 100, pushupBottomElbow: 90, allowKneePushup: false, armRaiseMinShoulder: 140, upperSquatDrop: 0.5, frontPushupDepth: 50 },
-  HARD: { squatBottomKnee: 85, pushupBottomElbow: 75, allowKneePushup: false, armRaiseMinShoulder: 160, upperSquatDrop: 0.7, frontPushupDepth: 35 },
+  // floorPushupZoom: 바닥 푸시업에서 얼굴이 팔을 편 자세보다 몇 배 커 보여야 하는지 (= 몇 배 가까워져야 하는지)
+  EASY: { squatBottomKnee: 120, pushupBottomElbow: 110, allowKneePushup: true, armRaiseMinShoulder: 90, upperSquatDrop: 0.3, frontPushupDepth: 65, floorPushupZoom: 1.5 },
+  NORMAL: { squatBottomKnee: 100, pushupBottomElbow: 90, allowKneePushup: false, armRaiseMinShoulder: 140, upperSquatDrop: 0.5, frontPushupDepth: 50, floorPushupZoom: 2.0 },
+  HARD: { squatBottomKnee: 85, pushupBottomElbow: 75, allowKneePushup: false, armRaiseMinShoulder: 160, upperSquatDrop: 0.7, frontPushupDepth: 35, floorPushupZoom: 2.5 },
 };
 
 export const Hint = {
@@ -346,10 +349,53 @@ export class FrontPushupCounter extends RepCounter {
   }
 }
 
+/**
+ * 바닥 푸시업: 폰을 화면이 위로 오게 얼굴 아래 바닥에 눕혀 두면 전면 카메라가 얼굴을 올려다본다.
+ * 내려갈수록 얼굴이 카메라에 가까워져 크게 보이므로, 얼굴 너비로 센다. 거리는 너비에 반비례한다.
+ * 판정값은 `100 × (팔을 편 자세의 얼굴 너비) / (지금 얼굴 너비)`: 100 = 팔을 편 자세(최근 6초 중 가장 멀 때),
+ * 작을수록 가까움. 얼굴은 `points.face = { w, confidence }` 로 받는다.
+ */
+export class FaceApproachCounter extends RepCounter {
+  constructor(difficulty, config) {
+    super(config);
+    this.top = 85;
+    this.bottom = 100 / difficulty.floorPushupZoom;
+    this.windowMs = 6000;
+    this.samples = [];
+    this.recording = false;
+  }
+
+  update(timestampMs, points) {
+    this.now = timestampMs;
+    this.recording = true;
+    try {
+      return super.update(timestampMs, points);
+    } finally {
+      this.recording = false;
+    }
+  }
+
+  measure(points, smooth) {
+    const face = points.face;
+    if (!face || face.confidence < this.config.minConfidence || !(face.w > 0)) return null;
+    if (this.recording) {
+      this.samples.push({ t: this.now, w: face.w });
+      while (this.samples.length && this.now - this.samples[0].t > this.windowMs) this.samples.shift();
+    }
+    const farthest = Math.min(face.w, ...this.samples.map((x) => x.w));
+    return { angle: smooth((100 * farthest) / face.w), formHint: Hint.NONE };
+  }
+
+  reset() {
+    this.samples = [];
+  }
+}
+
 export function createCounter(exercise, difficultyName, config) {
   const d = Difficulty[difficultyName] ?? Difficulty.NORMAL;
   if (exercise === Exercise.SQUAT_UPPER) return new UpperBodySquatCounter(d, config);
   if (exercise === Exercise.PUSHUP_FRONT) return new FrontPushupCounter(d, config);
+  if (exercise === Exercise.PUSHUP_FLOOR) return new FaceApproachCounter(d, config);
   if (exercise === Exercise.PUSHUP) return new PushupCounter(d, config);
   if (exercise === Exercise.ARM_RAISE) return new ArmRaiseCounter(d, config);
   return new SquatCounter(d, config);

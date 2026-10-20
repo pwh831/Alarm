@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  ArmRaiseCounter, Difficulty, Hint, MissionSession, MotionGuard, PushupCounter, SquatCounter, UpperBodySquatCounter, FrontPushupCounter,
+  ArmRaiseCounter, Difficulty, Hint, MissionSession, MotionGuard, PushupCounter, SquatCounter, UpperBodySquatCounter, FrontPushupCounter, FaceApproachCounter,
   angleDeg, matchesEmergency, streak, summary,
 } from './core.js';
 
@@ -261,4 +261,42 @@ test('front pushup needs both shoulders and a wrist', () => {
   const c = new FrontPushupCounter(Difficulty.NORMAL);
   assert.equal(c.sees(frontPushup(100)), true);
   assert.equal(c.sees({ leftShoulder: P(0.4, 0.5), rightShoulder: P(0.6, 0.5) }), false);
+});
+
+// 바닥 푸시업: 팔을 편 자세에서 얼굴 너비 100px, 값 v(100 = 팔을 편 자세)일 때 너비 = 100 × 100 / v.
+const floorFace = (value) => ({ face: { w: (100 * 100) / value, confidence: 0.9 } });
+
+test('floor pushup counts face approaches by difficulty', () => {
+  for (const [diff, depth, expected] of [
+    [Difficulty.NORMAL, 40, 3], // 2.5배 ≥ 2배
+    [Difficulty.NORMAL, 60, 0], // 1.67배 < 2배
+    [Difficulty.EASY, 60, 3], // 1.67배 ≥ 1.5배
+    [Difficulty.HARD, 45, 0], // 2.2배 < 2.5배
+  ]) {
+    const d = driver(new FaceApproachCounter(diff), floorFace);
+    d.hold(100, 500);
+    for (let i = 0; i < 3; i++) d.rep(100, depth);
+    assert.equal(d.last.reps, expected, `${JSON.stringify(diff)} depth ${depth}`);
+  }
+});
+
+test('floor pushup needs a confident face and pauses while the phone moves', () => {
+  const c = new FaceApproachCounter(Difficulty.NORMAL);
+  assert.equal(c.sees(floorFace(100)), true);
+  assert.equal(c.sees({ face: { w: 100, confidence: 0.1 } }), false);
+  assert.equal(c.sees({}), false);
+
+  // 폰을 손에 들고 얼굴 쪽으로 움직이면 MissionSession이 세지 않는다
+  const s = new MissionSession(new FaceApproachCounter(Difficulty.NORMAL));
+  let t = 0;
+  let st;
+  const feed = (v, ms, moving = false) => {
+    for (let i = 0; i < Math.max(1, Math.floor(ms / 33)); i++) { t += 33; st = s.update(t, floorFace(v), moving); }
+    return st;
+  };
+  feed(100, 3200);
+  for (const v of [80, 50, 40, 40, 60, 90, 100]) feed(v, 150, true);
+  assert.equal(feed(100, 100).rep.reps, 0);
+  for (const v of [80, 60, 45, 40, 40, 40, 60, 80, 95, 100, 100]) feed(v, 100);
+  assert.equal(feed(100, 100).rep.reps, 1);
 });

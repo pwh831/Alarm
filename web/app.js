@@ -1,12 +1,12 @@
 import {
-  EMERGENCY_PHRASE, Hint, MissionSession, MotionGuard, Phase, RANDOM_EXERCISES,
+  EMERGENCY_PHRASE, Exercise, Hint, MissionSession, MotionGuard, Phase, RANDOM_EXERCISES,
   createCounter, dayKey, matchesEmergency, narrowVariant, successDays, summary,
 } from './core.js';
 
 // ── 설정·기록 저장 (이 브라우저의 localStorage) ────────────────
 const SETTINGS_KEY = 'fitwake.settings';
 const RECORDS_KEY = 'fitwake.records';
-const defaults = { exercise: 'SQUAT', difficulty: 'NORMAL', reps: 15, narrow: false, shortcutName: 'FitWake 완료' };
+const defaults = { exercise: 'SQUAT', difficulty: 'NORMAL', reps: 15, narrow: false, floorPushup: false, shortcutName: 'FitWake 완료' };
 
 function load(key, fallback) {
   try {
@@ -26,7 +26,7 @@ if (settings.exercise === 'SQUAT_UPPER') {
 }
 const records = () => load(RECORDS_KEY, []);
 
-const LABEL = { SQUAT: '스쿼트', SQUAT_UPPER: '스쿼트', PUSHUP: '푸시업', PUSHUP_FRONT: '푸시업', ARM_RAISE: '팔 올리기', RANDOM: '랜덤' };
+const LABEL = { SQUAT: '스쿼트', SQUAT_UPPER: '스쿼트', PUSHUP: '푸시업', PUSHUP_FRONT: '푸시업', PUSHUP_FLOOR: '푸시업', ARM_RAISE: '팔 올리기', RANDOM: '랜덤' };
 const DEFAULT_REPS = { SQUAT: 15, PUSHUP: 10, ARM_RAISE: 20, RANDOM: 15 };
 const $ = (id) => document.getElementById(id);
 
@@ -46,10 +46,12 @@ function renderSettings() {
   $('difficulty').value = settings.difficulty;
   $('reps').value = settings.reps;
   $('narrow').checked = settings.narrow;
+  $('floor-pushup').checked = settings.floorPushup;
+  $('floor-pushup-row').classList.toggle('hidden', settings.exercise !== 'PUSHUP' && settings.exercise !== 'RANDOM');
   $('shortcut-name').value = settings.shortcutName;
   $('shortcut-name-label').textContent = settings.shortcutName;
   $('mission-url').textContent = missionUrl;
-  $('exercise-note').textContent = placementNote(settings.exercise, settings.narrow);
+  $('exercise-note').textContent = placementNote(settings.exercise, settings.narrow, settings.floorPushup);
 }
 $('exercise').addEventListener('change', (e) => {
   settings.exercise = e.target.value;
@@ -63,13 +65,20 @@ $('narrow').addEventListener('change', (e) => {
   save(SETTINGS_KEY, settings);
   renderSettings();
 });
+$('floor-pushup').addEventListener('change', (e) => {
+  settings.floorPushup = e.target.checked;
+  save(SETTINGS_KEY, settings);
+  renderSettings();
+});
 
 /** 폰을 어디에 두고 어떻게 서야 하는지. */
-function placementNote(exercise, narrow) {
+function placementNote(exercise, narrow, floorPushup) {
   const squat = narrow
     ? '스쿼트: 머리부터 엉덩이까지만 보이면 돼요. 폰을 허리 높이에 두고 1~1.5m 떨어져 서세요.'
     : '스쿼트: 폰을 세워 두고 전신이 보이게 2~3m 떨어져 서세요.';
-  const pushup = narrow
+  const pushup = floorPushup
+    ? '푸시업: 폰을 화면이 위로 오게 얼굴 아래 바닥에 눕혀 두세요. 내려갈 때 얼굴이 화면에 가까워지는 걸로 세요.'
+    : narrow
     ? '푸시업: 폰을 머리 앞 바닥(손에서 50cm쯤)에 세워 정면에서 얼굴·어깨·양손이 보이게 하세요.'
     : '푸시업: 폰을 몸 옆쪽 바닥에 세워 측면에서 전신이 찍히게 하세요.';
   if (exercise === 'SQUAT') return squat;
@@ -99,6 +108,7 @@ const LANDMARKS = {
 const BONES = [[11, 12], [23, 24], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 25], [25, 27], [24, 26], [26, 28]];
 
 let landmarker = null;
+let faceDetector = null;
 let mission = null; // { alarm, exercise, target, session, motion, stream, deviceId, openedAt, startedAt, running, wakeLock }
 
 async function getLandmarker() {
@@ -114,11 +124,28 @@ async function getLandmarker() {
   return landmarker;
 }
 
+const FACE_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
+
+async function getFaceDetector() {
+  if (faceDetector) return faceDetector;
+  const { FilesetResolver, FaceDetector } = await import(`${VISION_URL}/vision_bundle.mjs`);
+  const fileset = await FilesetResolver.forVisionTasks(`${VISION_URL}/wasm`);
+  const options = (delegate) => ({ baseOptions: { modelAssetPath: FACE_MODEL_URL, delegate }, runningMode: 'VIDEO' });
+  try {
+    faceDetector = await FaceDetector.createFromOptions(fileset, options('GPU'));
+  } catch {
+    faceDetector = await FaceDetector.createFromOptions(fileset, options('CPU'));
+  }
+  return faceDetector;
+}
+
 function openMission(alarm) {
   const picked = settings.exercise === 'RANDOM'
     ? RANDOM_EXERCISES[Math.floor(Math.random() * RANDOM_EXERCISES.length)]
     : settings.exercise;
-  const exercise = settings.narrow ? narrowVariant(picked) : picked;
+  const exercise = picked === Exercise.PUSHUP && settings.floorPushup
+    ? Exercise.PUSHUP_FLOOR
+    : settings.narrow ? narrowVariant(picked) : picked;
   mission = {
     alarm,
     exercise,
@@ -153,7 +180,8 @@ $('start').addEventListener('click', async () => {
   $('loading').classList.remove('hidden');
   try {
     await startCamera();
-    await getLandmarker();
+    if (mission.exercise === Exercise.PUSHUP_FLOOR) await getFaceDetector();
+    else await getLandmarker();
   } catch (e) {
     $('loading').classList.add('hidden');
     $('hint').textContent = `카메라나 인식 엔진을 시작하지 못했어요: ${e.message ?? e}`;
@@ -172,7 +200,8 @@ const CAMERA_KEY = 'fitwake.camera';
 async function startCamera() {
   mission.stream?.getTracks().forEach((t) => t.stop());
   const size = { width: { ideal: 720 }, height: { ideal: 1280 } };
-  const saved = load(CAMERA_KEY, null);
+  // 바닥에 눕힌 폰은 화면 쪽(전면) 카메라만 얼굴을 볼 수 있다.
+  const saved = mission.exercise === Exercise.PUSHUP_FLOOR ? null : load(CAMERA_KEY, null);
   try {
     mission.stream = await navigator.mediaDevices.getUserMedia({
       video: saved ? { deviceId: { exact: saved }, ...size } : { facingMode: 'user', ...size },
@@ -201,7 +230,7 @@ function cameraName(label) {
 
 // 기기의 카메라(전면, 후면, 후면 초광각 등)를 차례로 바꾼다. 고른 카메라는 다음 미션에도 쓴다.
 $('switch-camera').addEventListener('click', async () => {
-  if (!mission?.stream) return;
+  if (!mission?.stream || mission.exercise === Exercise.PUSHUP_FLOOR) return;
   const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
   if (cams.length < 2) return;
   const i = cams.findIndex((d) => d.deviceId === mission.deviceId);
@@ -220,17 +249,23 @@ function loop() {
   if (video.readyState >= 2 && video.currentTime !== mission.lastVideoTime) {
     mission.lastVideoTime = video.currentTime;
     const now = performance.now();
-    const result = landmarker.detectForVideo(video, now);
-    const lm = result.landmarks?.[0];
     const points = {};
-    if (lm) {
-      for (const [name, i] of Object.entries(LANDMARKS)) {
-        const p = lm[i];
-        points[name] = { x: p.x * video.videoWidth, y: p.y * video.videoHeight, confidence: p.visibility ?? 1 };
+    if (mission.exercise === Exercise.PUSHUP_FLOOR) {
+      const face = faceDetector.detectForVideo(video, now).detections?.[0];
+      const box = face?.boundingBox;
+      if (box) points.face = { x: box.originX, y: box.originY, w: box.width, h: box.height, confidence: face.categories?.[0]?.score ?? 1 };
+      drawFace(points.face);
+    } else {
+      const lm = landmarker.detectForVideo(video, now).landmarks?.[0];
+      if (lm) {
+        for (const [name, i] of Object.entries(LANDMARKS)) {
+          const p = lm[i];
+          points[name] = { x: p.x * video.videoWidth, y: p.y * video.videoHeight, confidence: p.visibility ?? 1 };
+        }
       }
+      drawSkeleton(lm);
     }
     const state = mission.session.update(now, points, mission.motion.isMoving(now));
-    drawSkeleton(lm);
     updateHud(state);
     if (state.rep.reps > mission.lastReps) {
       mission.lastReps = state.rep.reps;
@@ -256,12 +291,18 @@ function updateHud(state) {
 
 function hintText(state) {
   switch (state.rep.hint) {
-    case Hint.BODY_NOT_VISIBLE: return '몸이 잘 안 보여요. 조금 더 뒤로 가거나 불을 켜주세요';
+    case Hint.BODY_NOT_VISIBLE:
+      return mission.exercise === Exercise.PUSHUP_FLOOR
+        ? '얼굴이 안 보여요. 폰을 얼굴 바로 아래에 두고 화면을 내려다보세요'
+        : '몸이 잘 안 보여요. 조금 더 뒤로 가거나 불을 켜주세요';
     case Hint.TOO_FAST: return '너무 빨라요. 천천히 끝까지 해주세요';
     case Hint.LOWER_HIPS: return '엉덩이를 더 내려주세요';
     case Hint.GET_HORIZONTAL: return '몸을 바닥과 수평으로 만들어주세요';
     case Hint.KEEP_BODY_STRAIGHT: return '어깨부터 발끝까지 일직선을 유지하세요';
-    case Hint.PHONE_MOVING: return '폰이 움직이고 있어요. 바닥이나 선반에 세워 두세요';
+    case Hint.PHONE_MOVING:
+      return mission.exercise === Exercise.PUSHUP_FLOOR
+        ? '폰이 움직이고 있어요. 바닥에 내려놓으세요'
+        : '폰이 움직이고 있어요. 바닥이나 선반에 세워 두세요';
     case Hint.STAND_UPRIGHT: return '허리를 숙이지 말고 상체를 세운 채로 앉았다 일어나세요';
     case Hint.KEEP_HANDS_PLANTED: return '양손을 바닥에 짚고 움직이지 마세요';
     default:
@@ -271,14 +312,15 @@ function hintText(state) {
         SQUAT: '전신이 보이도록 2~3m 떨어져서 똑바로 서세요',
         SQUAT_UPPER: '머리부터 엉덩이까지 보이게 서서 잠깐 멈춰 주세요',
         PUSHUP_FRONT: '폰 앞에서 팔을 편 엎드린 자세로 잠깐 멈춰 주세요',
+        PUSHUP_FLOOR: '폰을 화면이 위로 오게 얼굴 아래 바닥에 두고, 팔을 편 자세로 화면을 내려다보세요',
         PUSHUP: '폰을 옆에 두고 팔을 편 플랭크 자세를 잡으세요',
         ARM_RAISE: '상체가 다 보이게 서서 양팔을 내리세요',
       }[mission.exercise];
   }
 }
 
-/** 미리보기와 같은 object-fit: cover 변환으로 관절을 그린다. */
-function drawSkeleton(lm) {
+/** 오버레이 캔버스를 화면 크기에 맞추고, 영상 좌표를 미리보기(object-fit: cover) 좌표로 바꾸는 변환을 돌려준다. */
+function prepareOverlay() {
   const canvas = $('overlay');
   const video = $('video');
   const dpr = window.devicePixelRatio || 1;
@@ -291,10 +333,25 @@ function drawSkeleton(lm) {
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  if (!lm || !video.videoWidth) return;
+  if (!video.videoWidth) return null;
   const scale = Math.max(w / video.videoWidth, h / video.videoHeight);
-  const dx = (w - video.videoWidth * scale) / 2;
-  const dy = (h - video.videoHeight * scale) / 2;
+  return { ctx, scale, dx: (w - video.videoWidth * scale) / 2, dy: (h - video.videoHeight * scale) / 2 };
+}
+
+function drawFace(face) {
+  const o = prepareOverlay();
+  if (!o || !face) return;
+  o.ctx.strokeStyle = '#ff8a3d';
+  o.ctx.lineWidth = 5;
+  o.ctx.strokeRect(face.x * o.scale + o.dx, face.y * o.scale + o.dy, face.w * o.scale, face.h * o.scale);
+}
+
+/** 미리보기와 같은 object-fit: cover 변환으로 관절을 그린다. */
+function drawSkeleton(lm) {
+  const o = prepareOverlay();
+  if (!o || !lm) return;
+  const { ctx, scale, dx, dy } = o;
+  const video = $('video');
   const at = (i) => [lm[i].x * video.videoWidth * scale + dx, lm[i].y * video.videoHeight * scale + dy];
   const seen = (i) => (lm[i].visibility ?? 1) >= 0.5;
   ctx.strokeStyle = '#ff8a3d';
